@@ -1,0 +1,15 @@
+services:
+  tenant-postgres:
+    image: 'postgres:16-alpine'
+    container_name: erp-tenant-postgres
+    environment:
+      - POSTGRES_DB=erp_tenant_db
+      - POSTGRES_USER=tenant_user
+      - POSTGRES_PASSWORD=tenant_secret
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_tenant_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_tenant_data:

@@ -42,6 +42,11 @@ spring:
       appRolePassword: ${ERP_APP_DB_PASSWORD:erp_app_local_password}
 
 erp:
+  security:
+    # Conjunto de claves publicas del emisor de credenciales. Fuera del
+    # entorno local debe ser https: la sustitucion de claves por un
+    # intermediario seria posible en claro.
+    jwks-url: ${JWKS_URL:http://localhost:8081/.well-known/jwks.json}
   tenant:
     outbox:
       relay-enabled: ${OUTBOX_RELAY_ENABLED:true}

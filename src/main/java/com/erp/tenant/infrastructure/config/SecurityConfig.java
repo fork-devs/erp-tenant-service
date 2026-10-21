@@ -44,7 +44,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/actuator/health/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/internal/**").hasAnyRole("ADMIN_TALLER", "SUPERADMIN", "INTERNAL_SERVICE")
                         .requestMatchers("/api/v1/**").authenticated()

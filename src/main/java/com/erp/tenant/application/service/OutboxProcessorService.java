@@ -55,10 +55,11 @@ public class OutboxProcessorService implements ProcessOutboxMessagesUseCase {
 
     @Override
     public int processUnpublishedMessages(int batchSize) {
-        // La lectura con reclamacion de la fila se hace en su propia transaccion, que
-        // se cierra al salir de este metodo. La publicacion, por tanto, ya no
-        // forma parte de ninguna transaccion.
-        List<TenantOutboxMessage> messages = outboxRepositoryPort.findPending(Instant.now(), batchSize);
+        // La lectura con reclamacion de la fila se hace en su propia
+        // transaccion, que se cierra al salir de este metodo. La publicacion,
+        // por tanto, ya no forma parte de ninguna transaccion.
+        List<TenantOutboxMessage> messages = unitOfWork.callInTransaction(
+                () -> outboxRepositoryPort.findPending(Instant.now(), batchSize));
 
         int published = 0;
         for (TenantOutboxMessage message : messages) {

@@ -34,8 +34,13 @@ public class TenantOutboxPersistenceAdapter implements TenantOutboxRepositoryPor
     }
 
     @Override
-    @Transactional
     public List<TenantOutboxMessage> findPending(Instant now, int limit) {
+        // La reclamacion de la fila necesita una transaccion escribible:
+        // SELECT ... FOR UPDATE SKIP LOCKED no se puede ejecutar en una
+        // transaccion de solo lectura. La abre el relay, en la capa de
+        // aplicacion, y se cierra al salir de esta llamada: la publicacion
+        // ocurre despues, con la transaccion ya cerrada.
+        transactionGuard.requireActiveTransaction("findPendingOutboxMessages");
         return repository.findPendingForUpdate(now, PageRequest.of(0, limit)).stream()
                 .map(TenantOutboxPersistenceMapper::toDomain)
                 .toList();
@@ -50,8 +55,8 @@ public class TenantOutboxPersistenceAdapter implements TenantOutboxRepositoryPor
     }
 
     @Override
-    @Transactional
     public TenantOutboxMessage reactivate(UUID id) {
+        transactionGuard.requireActiveTransaction("reactivateOutboxMessage");
         TenantOutboxJpaEntity entity = repository.findByIdForUpdate(id);
         if (entity == null) {
             return null;

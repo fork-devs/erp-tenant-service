@@ -6,6 +6,7 @@ import com.erp.tenant.interfaces.rest.dto.response.PlanResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,10 @@ public class PlanController {
     }
 
     @GetMapping
+    // El catalogo de planes es publico: lo consulta el cliente antes de
+    // iniciar sesion, para mostrar los planes disponibles. No es una
+    // operacion de administracion.
+    @PreAuthorize("permitAll()")
     @Operation(summary = "Listar todos los planes de suscripción configurados")
     public ResponseEntity<List<PlanResponse>> listPlans() {
         List<PlanResponse> responses = listPlansUseCase.listAllPlans().stream()

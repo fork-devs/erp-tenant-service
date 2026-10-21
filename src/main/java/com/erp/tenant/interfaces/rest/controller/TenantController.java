@@ -99,6 +99,7 @@ public class TenantController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER', 'ASESOR', 'MECANICO')")
     @Operation(summary = "Obtener detalles de un taller por su ID")
     public ResponseEntity<TenantResponse> getTenantById(@PathVariable UUID id, Authentication authentication) {
         verificarAcceso(id, authentication);

@@ -8,6 +8,7 @@ import com.erp.tenant.infrastructure.persistence.entity.TenantJpaEntity;
 import com.erp.tenant.infrastructure.persistence.mapper.TenantPersistenceMapper;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataTenantRepository;
 import org.springframework.stereotype.Component;
+import com.erp.tenant.infrastructure.persistence.TransactionGuard;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -17,15 +18,18 @@ import java.util.stream.Collectors;
 @Component
 public class TenantPersistenceAdapter implements TenantRepositoryPort {
 
+    private final TransactionGuard transactionGuard;
     private final SpringDataTenantRepository springDataTenantRepository;
 
-    public TenantPersistenceAdapter(SpringDataTenantRepository springDataTenantRepository) {
+    public TenantPersistenceAdapter(SpringDataTenantRepository springDataTenantRepository,
+                                   TransactionGuard transactionGuard) {
         this.springDataTenantRepository = springDataTenantRepository;
+        this.transactionGuard = transactionGuard;
     }
 
     @Override
-    @Transactional
     public Tenant save(Tenant tenant) {
+        transactionGuard.requireActiveTransaction("saveTenant");
         TenantJpaEntity entity = TenantPersistenceMapper.toEntity(tenant);
         TenantJpaEntity saved = springDataTenantRepository.save(entity);
         return TenantPersistenceMapper.toDomain(saved);

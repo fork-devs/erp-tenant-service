@@ -7,40 +7,57 @@ import com.erp.tenant.infrastructure.persistence.mapper.TenantOutboxPersistenceM
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataTenantOutboxRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import com.erp.tenant.infrastructure.persistence.TransactionGuard;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 public class TenantOutboxPersistenceAdapter implements TenantOutboxRepositoryPort {
 
+    private final TransactionGuard transactionGuard;
     private final SpringDataTenantOutboxRepository repository;
 
-    public TenantOutboxPersistenceAdapter(SpringDataTenantOutboxRepository repository) {
+    public TenantOutboxPersistenceAdapter(SpringDataTenantOutboxRepository repository,
+                                        TransactionGuard transactionGuard) {
         this.repository = repository;
+        this.transactionGuard = transactionGuard;
+    }
+
+    @Override
+    public TenantOutboxMessage save(TenantOutboxMessage message) {
+        transactionGuard.requireActiveTransaction("saveOutboxMessage");
+        TenantOutboxJpaEntity entity = TenantOutboxPersistenceMapper.toEntity(message);
+        return TenantOutboxPersistenceMapper.toDomain(repository.save(entity));
     }
 
     @Override
     @Transactional
-    public TenantOutboxMessage save(TenantOutboxMessage message) {
-        TenantOutboxJpaEntity entity = TenantOutboxPersistenceMapper.toEntity(message);
-        TenantOutboxJpaEntity saved = repository.save(entity);
-        return TenantOutboxPersistenceMapper.toDomain(saved);
+    public List<TenantOutboxMessage> findPending(Instant now, int limit) {
+        return repository.findPendingForUpdate(now, PageRequest.of(0, limit)).stream()
+                .map(TenantOutboxPersistenceMapper::toDomain)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<TenantOutboxMessage> findUnpublished(int limit) {
-        return repository.findUnpublished(PageRequest.of(0, limit)).stream()
+    public List<TenantOutboxMessage> findDeadLettered(UUID tenantId, int limit) {
+        return repository.findDeadLettered(tenantId, PageRequest.of(0, limit)).stream()
                 .map(TenantOutboxPersistenceMapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
-    public void markAsPublished(UUID id) {
-        repository.markAsPublished(id);
+    public TenantOutboxMessage reactivate(UUID id) {
+        TenantOutboxJpaEntity entity = repository.findByIdForUpdate(id);
+        if (entity == null) {
+            return null;
+        }
+        TenantOutboxMessage message = TenantOutboxPersistenceMapper.toDomain(entity);
+        message.reactivate();
+        return TenantOutboxPersistenceMapper.toDomain(repository.save(TenantOutboxPersistenceMapper.toEntity(message)));
     }
 }

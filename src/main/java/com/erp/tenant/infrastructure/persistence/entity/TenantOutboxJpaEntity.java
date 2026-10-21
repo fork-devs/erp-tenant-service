@@ -21,6 +21,9 @@ public class TenantOutboxJpaEntity {
     @Column(name = "aggregate_id", nullable = false)
     private UUID aggregateId;
 
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
     @Column(name = "event_type", nullable = false, length = 100)
     private String eventType;
 
@@ -35,10 +38,11 @@ public class TenantOutboxJpaEntity {
 
     public TenantOutboxJpaEntity() {}
 
-    public TenantOutboxJpaEntity(UUID id, String aggregateType, UUID aggregateId, String eventType, String payload, Boolean published, Instant createdAt) {
+    public TenantOutboxJpaEntity(UUID id, String aggregateType, UUID aggregateId, UUID tenantId, String eventType, String payload, Boolean published, Instant createdAt) {
         this.id = id;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
+        this.tenantId = tenantId;
         this.eventType = eventType;
         this.payload = payload;
         this.published = published;
@@ -63,6 +67,14 @@ public class TenantOutboxJpaEntity {
 
     public UUID getAggregateId() {
         return aggregateId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
     }
 
     public void setAggregateId(UUID aggregateId) {

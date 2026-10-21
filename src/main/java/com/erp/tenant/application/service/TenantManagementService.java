@@ -89,7 +89,7 @@ public class TenantManagementService implements
                 event.getOccurredAt()
         );
 
-        outboxRepositoryPort.save(TenantOutboxMessage.of(updatedTenant.getId().getValue(), event.getEventType(), payload));
+        outboxRepositoryPort.save(TenantOutboxMessage.of(updatedTenant.getId().getValue(), updatedTenant.getId().getValue(), event.getEventType(), payload));
 
         return toResult(updatedTenant, newPlan);
     }
@@ -112,7 +112,7 @@ public class TenantManagementService implements
                 event.getEventId(), event.getEventType(), event.getTenantId(), event.getRuc(), event.getReason().replace("\"", "\\\""), event.getOccurredAt()
         );
 
-        outboxRepositoryPort.save(TenantOutboxMessage.of(tenantId, event.getEventType(), payload));
+        outboxRepositoryPort.save(TenantOutboxMessage.of(tenantId, tenantId, event.getEventType(), payload));
 
         Plan plan = planRepositoryPort.findById(savedTenant.getPlanId()).orElse(null);
         return toResult(savedTenant, plan);

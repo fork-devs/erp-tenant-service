@@ -52,6 +52,12 @@ erp:
       relay-enabled: ${OUTBOX_RELAY_ENABLED:true}
       interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:5000}
       batch-size: 50
+      # Numero maximo de intentos antes de que un mensaje pase a la cola de
+      # muertos. Con la escala de esperas (5s, 30s, 5m, 30m, 2h, 8h, 24h),
+      # siete intentos cubren la ventana de recuperacion de 24 horas.
+      max-attempts: ${OUTBOX_MAX_ATTEMPTS:7}
+      # Espera maxima entre reintentos.
+      max-delay: ${OUTBOX_MAX_DELAY:PT24H}
 
 springdoc:
   api-docs:

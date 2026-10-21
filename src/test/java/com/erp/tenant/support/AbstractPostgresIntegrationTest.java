@@ -30,5 +30,10 @@ public abstract class AbstractPostgresIntegrationTest {
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.flyway.enabled", () -> "true");
+
+        // El servicio valida el token contra el JWKS del emisor de
+        // credenciales. Los tests levantan su propio emisor, de modo que los
+        // tokens que se usan estan realmente firmados.
+        registry.add("erp.security.jwks-url", TestJwksServer::jwksUrl);
     }
 }

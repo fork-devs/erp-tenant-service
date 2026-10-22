@@ -1,7 +1,10 @@
 package com.erp.tenant.infrastructure.persistence.entity;
 
+import com.erp.tenant.domain.model.TenantOutboxStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -24,6 +27,9 @@ public class TenantOutboxJpaEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
+    @Column(name = "event_id", nullable = false, unique = true)
+    private UUID eventId;
+
     @Column(name = "event_type", nullable = false, length = 100)
     private String eventType;
 
@@ -33,19 +39,39 @@ public class TenantOutboxJpaEntity {
     @Column(nullable = false)
     private Boolean published;
 
+    @Column(name = "attempts", nullable = false)
+    private Integer attempts;
+
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
+
+    @Column(name = "last_error", columnDefinition = "TEXT")
+    private String lastError;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private TenantOutboxStatus status;
+
     @Column(name = "created_at")
     private Instant createdAt;
 
     public TenantOutboxJpaEntity() {}
 
-    public TenantOutboxJpaEntity(UUID id, String aggregateType, UUID aggregateId, UUID tenantId, String eventType, String payload, Boolean published, Instant createdAt) {
+    public TenantOutboxJpaEntity(UUID id, String aggregateType, UUID aggregateId, UUID tenantId, UUID eventId,
+                                 String eventType, String payload, Boolean published, Integer attempts,
+                                 Instant nextAttemptAt, String lastError, TenantOutboxStatus status, Instant createdAt) {
         this.id = id;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.tenantId = tenantId;
+        this.eventId = eventId;
         this.eventType = eventType;
         this.payload = payload;
         this.published = published;
+        this.attempts = attempts;
+        this.nextAttemptAt = nextAttemptAt;
+        this.lastError = lastError;
+        this.status = status;
         this.createdAt = createdAt;
     }
 
@@ -79,6 +105,46 @@ public class TenantOutboxJpaEntity {
 
     public void setAggregateId(UUID aggregateId) {
         this.aggregateId = aggregateId;
+    }
+
+    public UUID getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
+    }
+
+    public Integer getAttempts() {
+        return attempts;
+    }
+
+    public void setAttempts(Integer attempts) {
+        this.attempts = attempts;
+    }
+
+    public Instant getNextAttemptAt() {
+        return nextAttemptAt;
+    }
+
+    public void setNextAttemptAt(Instant nextAttemptAt) {
+        this.nextAttemptAt = nextAttemptAt;
+    }
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    public void setLastError(String lastError) {
+        this.lastError = lastError;
+    }
+
+    public TenantOutboxStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TenantOutboxStatus status) {
+        this.status = status;
     }
 
     public String getEventType() {

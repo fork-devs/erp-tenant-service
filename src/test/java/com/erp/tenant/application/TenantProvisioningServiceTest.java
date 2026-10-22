@@ -41,13 +41,31 @@ class TenantProvisioningServiceTest {
     @Mock
     private TenantOutboxRepositoryPort outboxRepositoryPort;
 
+    /**
+     * UnitOfWork de prueba: ejecuta la operacion en linea. La demarcacion
+     * transaccional como tal se verifica en los tests de integracion; aqui lo
+     * que importa es que el caso de uso delega la atomicidad en el puerto.
+     */
+    private static final com.erp.tenant.domain.port.UnitOfWork DIRECTO = new com.erp.tenant.domain.port.UnitOfWork() {
+        @Override
+        public void runInTransaction(Runnable work) {
+            work.run();
+        }
+
+        @Override
+        public <T> T callInTransaction(java.util.function.Supplier<T> work) {
+            return work.get();
+        }
+    };
+
     private TenantProvisioningService provisioningService;
 
     private Plan basicPlan;
 
     @BeforeEach
     void setUp() {
-        provisioningService = new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort);
+        provisioningService = new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
+                DIRECTO, new com.erp.tenant.infrastructure.messaging.DomainEventSerializer(new com.fasterxml.jackson.databind.ObjectMapper()));
         basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, new BigDecimal("99.00"));
     }
 

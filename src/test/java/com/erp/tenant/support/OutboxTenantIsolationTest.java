@@ -5,6 +5,7 @@ import com.erp.tenant.application.dto.result.TenantResult;
 import com.erp.tenant.application.service.TenantProvisioningService;
 import com.erp.tenant.domain.model.TenantOutboxMessage;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
+import com.erp.tenant.domain.port.UnitOfWork;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -28,6 +29,9 @@ class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
     @Autowired
     private TenantOutboxRepositoryPort outboxRepositoryPort;
 
+    @Autowired
+    private UnitOfWork unitOfWork;
+
     @Test
     void elMensajeDelOutboxLlevaElTallerDelTenantCreado() {
         TenantResult result = tenantProvisioningService.provisionTenant(new ProvisionTenantCommand(
@@ -37,7 +41,11 @@ class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
                 null,
                 "#1A2B3C"));
 
-        List<TenantOutboxMessage> pendientes = outboxRepositoryPort.findUnpublished(50);
+        // La reclamacion de la fila se hace dentro de un limite transaccional:
+        // SELECT ... FOR UPDATE SKIP LOCKED no se ejecuta en una transaccion
+        // de solo lectura.
+        List<TenantOutboxMessage> pendientes = unitOfWork.callInTransaction(
+                () -> outboxRepositoryPort.findPending(java.time.Instant.now(), 50));
 
         assertTrue(pendientes.stream().anyMatch(m ->
                         m.getTenantId().equals(result.id())

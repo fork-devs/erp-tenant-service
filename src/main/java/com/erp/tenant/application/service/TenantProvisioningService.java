@@ -13,6 +13,8 @@ import com.erp.tenant.domain.model.TenantOutboxMessage;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
+import com.erp.tenant.domain.port.UnitOfWork;
+import com.erp.tenant.infrastructure.messaging.DomainEventSerializer;
 import com.erp.tenant.domain.valueobject.BrandColor;
 import com.erp.tenant.domain.valueobject.Ruc;
 
@@ -23,14 +25,20 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
     private final TenantRepositoryPort tenantRepositoryPort;
     private final PlanRepositoryPort planRepositoryPort;
     private final TenantOutboxRepositoryPort outboxRepositoryPort;
+    private final UnitOfWork unitOfWork;
+    private final DomainEventSerializer eventSerializer;
 
     public TenantProvisioningService(
             TenantRepositoryPort tenantRepositoryPort,
             PlanRepositoryPort planRepositoryPort,
-            TenantOutboxRepositoryPort outboxRepositoryPort) {
+            TenantOutboxRepositoryPort outboxRepositoryPort,
+            UnitOfWork unitOfWork,
+            DomainEventSerializer eventSerializer) {
         this.tenantRepositoryPort = tenantRepositoryPort;
         this.planRepositoryPort = planRepositoryPort;
         this.outboxRepositoryPort = outboxRepositoryPort;
+        this.unitOfWork = unitOfWork;
+        this.eventSerializer = eventSerializer;
     }
 
     @Override
@@ -43,51 +51,60 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
         }
 
         Ruc ruc = Ruc.of(command.ruc());
-        if (tenantRepositoryPort.existsByRuc(ruc)) {
-            throw new RucAlreadyExistsException(ruc.getValue());
-        }
 
-        // Resolver Plan
-        Plan plan = resolvePlan(command);
+        // El taller y el evento de dominio se confirman juntos: si la
+        // escritura del evento falla, el taller tampoco se crea. Sin este
+        // limite, cada llamada a un repositorio abria su propia transaccion y
+        // un fallo intermedio dejaba un taller sin su evento, que es un
+        // estado que nadie puede recuperar.
+        return unitOfWork.callInTransaction(() -> {
+            if (tenantRepositoryPort.existsByRuc(ruc)) {
+                throw new RucAlreadyExistsException(ruc.getValue());
+            }
 
-        BrandColor brandColor = BrandColor.of(command.brandColor());
-        Tenant tenant = Tenant.create(command.commercialName(), ruc, plan.getId(), brandColor);
+            // Resolver Plan
+            Plan plan = resolvePlan(command);
 
-        // 1. Guardar Tenant en PostgreSQL
-        Tenant savedTenant = tenantRepositoryPort.save(tenant);
+            BrandColor brandColor = BrandColor.of(command.brandColor());
+            Tenant tenant = Tenant.create(command.commercialName(), ruc, plan.getId(), brandColor);
 
-        // 2. Crear Evento de Dominio TenantProvisioned
-        TenantProvisionedEvent event = new TenantProvisionedEvent(
-                savedTenant.getId().getValue(),
-                savedTenant.getCommercialName(),
-                savedTenant.getRuc().getValue(),
-                plan.getCode().name(),
-                plan.getMaxUsers(),
-                plan.getMaxVehicles(),
-                plan.getMaxIotMsgPerDay()
-        );
+            // 1. Guardar Tenant en PostgreSQL
+            Tenant savedTenant = tenantRepositoryPort.save(tenant);
 
-        String payloadJson = serializeEvent(event);
+            // 2. Crear Evento de Dominio TenantProvisioned
+            TenantProvisionedEvent event = new TenantProvisionedEvent(
+                    savedTenant.getId().getValue(),
+                    savedTenant.getCommercialName(),
+                    savedTenant.getRuc().getValue(),
+                    plan.getCode().name(),
+                    plan.getMaxUsers(),
+                    plan.getMaxVehicles(),
+                    plan.getMaxIotMsgPerDay()
+            );
 
-        // 3. Guardar en Transactional Outbox (misma transacción local)
-        TenantOutboxMessage outboxMessage = TenantOutboxMessage.of(
-                savedTenant.getId().getValue(),
-                savedTenant.getId().getValue(),
-                event.getEventType(),
-                payloadJson
-        );
-        outboxRepositoryPort.save(outboxMessage);
+            String payloadJson = eventSerializer.serialize(event);
 
-        return new TenantResult(
-                savedTenant.getId().getValue(),
-                savedTenant.getCommercialName(),
-                savedTenant.getRuc().getValue(),
-                plan.getId(),
-                plan.getCode().name(),
-                savedTenant.getStatus().name(),
-                savedTenant.getBrandColor().getValue(),
-                savedTenant.getCreatedAt()
-        );
+            // 3. Guardar en la Transactional Outbox, en la MISMA transaccion
+            TenantOutboxMessage outboxMessage = TenantOutboxMessage.of(
+                    savedTenant.getId().getValue(),
+                    savedTenant.getId().getValue(),
+                    event.getEventId(),
+                    event.getEventType(),
+                    payloadJson
+            );
+            outboxRepositoryPort.save(outboxMessage);
+
+            return new TenantResult(
+                    savedTenant.getId().getValue(),
+                    savedTenant.getCommercialName(),
+                    savedTenant.getRuc().getValue(),
+                    plan.getId(),
+                    plan.getCode().name(),
+                    savedTenant.getStatus().name(),
+                    savedTenant.getBrandColor().getValue(),
+                    savedTenant.getCreatedAt()
+            );
+        });
     }
 
     private Plan resolvePlan(ProvisionTenantCommand command) {
@@ -105,19 +122,5 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
                 .orElseThrow(() -> new PlanNotFoundException("BASICO"));
     }
 
-    private String serializeEvent(TenantProvisionedEvent event) {
-        return String.format(
-                "{\"eventId\":\"%s\",\"eventType\":\"%s\",\"tenantId\":\"%s\",\"commercialName\":\"%s\",\"ruc\":\"%s\",\"planCode\":\"%s\",\"maxUsers\":%d,\"maxVehicles\":%d,\"maxIotMsgPerDay\":%d,\"occurredAt\":\"%s\"}",
-                event.getEventId(),
-                event.getEventType(),
-                event.getTenantId(),
-                event.getCommercialName().replace("\"", "\\\""),
-                event.getRuc(),
-                event.getPlanCode(),
-                event.getMaxUsers(),
-                event.getMaxVehicles(),
-                event.getMaxIotMsgPerDay(),
-                event.getOccurredAt()
-        );
-    }
+
 }

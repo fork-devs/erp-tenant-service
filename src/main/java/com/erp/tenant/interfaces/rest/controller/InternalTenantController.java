@@ -34,7 +34,9 @@ public class InternalTenantController {
                 result.planCode(),
                 result.maxUsers(),
                 result.maxVehicles(),
-                result.maxIotMsgPerDay()
+                result.maxIotMsgPerDay(),
+                result.maxRequestsPerMinute(),
+                result.maxConcurrentSlots()
         );
         return ResponseEntity.ok(response);
     }

@@ -16,6 +16,8 @@ public final class PlanPersistenceMapper {
                 entity.getMaxUsers(),
                 entity.getMaxVehicles(),
                 entity.getMaxIotMsgPerDay(),
+                entity.getMaxRequestsPerMinute(),
+                entity.getMaxConcurrentSlots(),
                 entity.getPriceMonthly()
         );
     }
@@ -28,6 +30,8 @@ public final class PlanPersistenceMapper {
                 domain.getMaxUsers(),
                 domain.getMaxVehicles(),
                 domain.getMaxIotMsgPerDay(),
+                domain.getMaxRequestsPerMinute(),
+                domain.getMaxConcurrentSlots(),
                 domain.getPriceMonthly()
         );
     }

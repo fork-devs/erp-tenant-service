@@ -66,7 +66,7 @@ class TenantProvisioningServiceTest {
     void setUp() {
         provisioningService = new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
                 DIRECTO, new com.erp.tenant.infrastructure.messaging.DomainEventSerializer(new com.fasterxml.jackson.databind.ObjectMapper()));
-        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, new BigDecimal("99.00"));
+        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
     }
 
     @Test

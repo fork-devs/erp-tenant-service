@@ -71,8 +71,8 @@ class TenantManagementServiceTest {
     void setUp() {
         managementService = new TenantManagementService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
                 DIRECTO, new com.erp.tenant.infrastructure.messaging.DomainEventSerializer(new com.fasterxml.jackson.databind.ObjectMapper()));
-        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, new BigDecimal("99.00"));
-        proPlan = new Plan(UUID.randomUUID(), PlanCode.PRO, 10, 200, 5000, new BigDecimal("249.00"));
+        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
+        proPlan = new Plan(UUID.randomUUID(), PlanCode.PRO, 10, 200, 5000, 500, 40, new BigDecimal("249.00"));
         sampleTenant = Tenant.create("Taller Test", Ruc.of("20601234567"), basicPlan.getId(), BrandColor.of("#2563EB"));
     }
 

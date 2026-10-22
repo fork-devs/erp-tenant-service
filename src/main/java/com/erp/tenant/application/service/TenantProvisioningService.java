@@ -72,6 +72,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
         // 3. Guardar en Transactional Outbox (misma transacción local)
         TenantOutboxMessage outboxMessage = TenantOutboxMessage.of(
                 savedTenant.getId().getValue(),
+                savedTenant.getId().getValue(),
                 event.getEventType(),
                 payloadJson
         );

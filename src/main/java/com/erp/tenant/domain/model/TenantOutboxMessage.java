@@ -9,29 +9,32 @@ public class TenantOutboxMessage implements Serializable {
     private final UUID id;
     private final String aggregateType;
     private final UUID aggregateId;
+    private final UUID tenantId;
     private final String eventType;
     private final String payload;
     private boolean published;
     private final Instant createdAt;
 
-    public TenantOutboxMessage(UUID id, String aggregateType, UUID aggregateId, String eventType, String payload, boolean published, Instant createdAt) {
-        if (id == null || aggregateType == null || aggregateId == null || eventType == null || payload == null) {
+    public TenantOutboxMessage(UUID id, String aggregateType, UUID aggregateId, UUID tenantId, String eventType, String payload, boolean published, Instant createdAt) {
+        if (id == null || aggregateType == null || aggregateId == null || tenantId == null || eventType == null || payload == null) {
             throw new IllegalArgumentException("Campos obligatorios del OutboxMessage no pueden ser nulos");
         }
         this.id = id;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
+        this.tenantId = tenantId;
         this.eventType = eventType;
         this.payload = payload;
         this.published = published;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
-    public static TenantOutboxMessage of(UUID aggregateId, String eventType, String payload) {
+    public static TenantOutboxMessage of(UUID aggregateId, UUID tenantId, String eventType, String payload) {
         return new TenantOutboxMessage(
                 UUID.randomUUID(),
                 "TENANT",
                 aggregateId,
+                tenantId,
                 eventType,
                 payload,
                 false,
@@ -53,6 +56,10 @@ public class TenantOutboxMessage implements Serializable {
 
     public UUID getAggregateId() {
         return aggregateId;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
     }
 
     public String getEventType() {

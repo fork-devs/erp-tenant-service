@@ -182,7 +182,9 @@ public class TenantManagementService implements
                 plan.getCode().name(),
                 plan.getMaxUsers(),
                 plan.getMaxVehicles(),
-                plan.getMaxIotMsgPerDay()
+                plan.getMaxIotMsgPerDay(),
+                plan.getMaxRequestsPerMinute(),
+                plan.getMaxConcurrentSlots()
         );
     }
 

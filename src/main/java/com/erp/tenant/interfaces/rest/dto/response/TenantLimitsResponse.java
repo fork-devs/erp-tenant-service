@@ -8,5 +8,7 @@ public record TenantLimitsResponse(
         String planCode,
         int maxUsers,
         int maxVehicles,
-        int maxIotMsgPerDay
+        int maxIotMsgPerDay,
+        int maxRequestsPerMinute,
+        int maxConcurrentSlots
 ) {}

@@ -160,6 +160,11 @@ public class GlobalRestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex) {
+        // El error interno se registra con el esquema estructurado y con su
+        // traza. La respuesta al cliente no cambia: sigue siendo generica.
+        com.erp.tenant.application.logging.SecurityEventLogger.registrar(
+                "error_interno", null, null, null, "fallo",
+                java.util.Map.of("error", ex.getClass().getSimpleName()));
         log.error("Unhandled internal server error occurred: ", ex);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ha ocurrido un error interno inesperado.");
         problem.setTitle("Error Interno del Servidor");

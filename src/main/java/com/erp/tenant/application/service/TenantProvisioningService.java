@@ -1,6 +1,7 @@
 package com.erp.tenant.application.service;
 
 import com.erp.tenant.application.dto.command.ProvisionTenantCommand;
+import com.erp.tenant.application.logging.SecurityEventLogger;
 import com.erp.tenant.application.dto.result.TenantResult;
 import com.erp.tenant.application.usecase.ProvisionTenantUseCase;
 import com.erp.tenant.domain.event.TenantProvisionedEvent;
@@ -93,6 +94,9 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
                     payloadJson
             );
             outboxRepositoryPort.save(outboxMessage);
+
+            SecurityEventLogger.registrar("taller_creado", savedTenant.getId().getValue(), null, null, "ok",
+                    java.util.Map.of());
 
             return new TenantResult(
                     savedTenant.getId().getValue(),

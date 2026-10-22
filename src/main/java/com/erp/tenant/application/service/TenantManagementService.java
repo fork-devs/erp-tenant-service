@@ -1,6 +1,7 @@
 package com.erp.tenant.application.service;
 
 import com.erp.tenant.application.dto.command.ChangePlanCommand;
+import com.erp.tenant.application.logging.SecurityEventLogger;
 import com.erp.tenant.application.dto.command.UpdateBrandingCommand;
 import com.erp.tenant.application.dto.result.TenantLimitsResult;
 import com.erp.tenant.application.dto.result.TenantResult;
@@ -95,6 +96,8 @@ public class TenantManagementService implements
                     event.getEventType(),
                     payload));
 
+            SecurityEventLogger.registrar("plan_taller_cambiado", updatedTenant.getId().getValue(), null, null, "ok",
+                    java.util.Map.of("plan", newPlan.getCode().name()));
             return toResult(updatedTenant, newPlan);
         });
     }

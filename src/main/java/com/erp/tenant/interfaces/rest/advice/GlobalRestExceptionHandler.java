@@ -1,6 +1,8 @@
 package com.erp.tenant.interfaces.rest.advice;
 
 import com.erp.tenant.domain.exception.DomainException;
+import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.domain.exception.TenantContextMissingException;
 import com.erp.tenant.domain.exception.InvalidRucException;
 import com.erp.tenant.domain.exception.PlanNotFoundException;
 import com.erp.tenant.domain.exception.RucAlreadyExistsException;
@@ -86,6 +88,42 @@ public class GlobalRestExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 
+    @ExceptionHandler(TenantAccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleTenantAccessDenied(TenantAccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Acceso Denegado");
+        problem.setType(URI.create("https://errors.erp-automotriz.com/tenant/access-denied"));
+        problem.setProperty("errorCode", ex.getErrorCode());
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    }
+
+    @ExceptionHandler(TenantContextMissingException.class)
+    public ResponseEntity<ProblemDetail> handleTenantContextMissing(TenantContextMissingException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Contexto de Taller Ausente");
+        problem.setType(URI.create("https://errors.erp-automotriz.com/tenant/context-missing"));
+        problem.setProperty("errorCode", ex.getErrorCode());
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    }
+
+    /**
+     * La denegacion de la seguridad a nivel de metodo se resuelve aqui y no en
+     * el filtro de seguridad: el resolutor de excepciones del dispatcher la
+     * intercepta antes de que llegue al filtro.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
+                "No tiene permisos para realizar esta operacion.");
+        problem.setTitle("Acceso Denegado");
+        problem.setType(URI.create("https://errors.erp-automotriz.com/tenant/access-denied"));
+        problem.setProperty("errorCode", "ACCESS_DENIED");
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Error de validación en los campos del request");
@@ -122,6 +160,11 @@ public class GlobalRestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex) {
+        // El error interno se registra con el esquema estructurado y con su
+        // traza. La respuesta al cliente no cambia: sigue siendo generica.
+        com.erp.tenant.application.logging.SecurityEventLogger.registrar(
+                "error_interno", null, null, null, "fallo",
+                java.util.Map.of("error", ex.getClass().getSimpleName()));
         log.error("Unhandled internal server error occurred: ", ex);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ha ocurrido un error interno inesperado.");
         problem.setTitle("Error Interno del Servidor");

@@ -6,6 +6,10 @@ services:
       - POSTGRES_DB=erp_tenant_db
       - POSTGRES_USER=tenant_user
       - POSTGRES_PASSWORD=tenant_secret
+      # El rol de ejecucion (erp_app) lo crea la migracion que concede los
+      # permisos sobre las tablas que crea. Su contrasena la fija la propia
+      # aplicacion en ERP_APP_DB_PASSWORD (ver .env.example), que es el valor
+      # que la migracion aplica como placeholder.
     ports:
       - '5433:5432'
     volumes:

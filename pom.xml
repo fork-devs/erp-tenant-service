@@ -66,15 +66,32 @@
             <version>2.6.0</version>
         </dependency>
 
+        <!--
+            Salud y disponibilidad del servicio. Sin esto no hay forma de
+            saber si el servicio responde, ni si su base de datos es
+            alcanzable, que es lo que necesita un orquestador para decidir
+            si le envia peticiones.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
+        <!--
+            PostgreSQL real embebido en proceso para los tests de integracion.
+            El entorno de ejecucion no dispone de Docker, de modo que
+            Testcontainers no es viable. Este artefacto descarga y arranca una
+            distribucion real de PostgreSQL como proceso nativo.
+        -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-postgres</artifactId>
+            <version>2.0.7</version>
             <scope>test</scope>
         </dependency>
         <dependency>

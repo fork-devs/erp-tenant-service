@@ -10,6 +10,9 @@ import com.erp.tenant.application.usecase.ProvisionTenantUseCase;
 import com.erp.tenant.application.usecase.ReactivateTenantUseCase;
 import com.erp.tenant.application.usecase.SuspendTenantUseCase;
 import com.erp.tenant.application.usecase.UpdateBrandingUseCase;
+import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.domain.exception.TenantContextMissingException;
+import com.erp.tenant.infrastructure.security.TenantContextHolder;
 import com.erp.tenant.interfaces.rest.dto.request.ChangePlanRequest;
 import com.erp.tenant.interfaces.rest.dto.request.ProvisionTenantRequest;
 import com.erp.tenant.interfaces.rest.dto.request.UpdateBrandingRequest;
@@ -20,6 +23,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +38,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Endpoints de gestion de talleres.
+ *
+ * <p>Cada operacion comprueba que el taller solicitado sea el del principal
+ * autenticado. La excepcion es el superadministrador de la plataforma, que
+ * opera con alcance transversal.
+ */
 @RestController
 @RequestMapping("/api/v1/tenants")
 @Tag(name = "Tenants", description = "Endpoints para el aprovisionamiento y gestión de talleres (inquilinos)")
@@ -61,6 +73,7 @@ public class TenantController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @Operation(summary = "Aprovisionar un nuevo taller/inquilino", description = "Crea el inquilino, asocia el plan y emite evento en transactional outbox")
     public ResponseEntity<TenantResponse> provisionTenant(@Valid @RequestBody ProvisionTenantRequest request) {
         ProvisionTenantCommand command = new ProvisionTenantCommand(
@@ -76,6 +89,7 @@ public class TenantController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @Operation(summary = "Listar todos los inquilinos")
     public ResponseEntity<List<TenantResponse>> listTenants() {
         List<TenantResponse> responses = getTenantDetailsUseCase.listAll().stream()
@@ -85,13 +99,16 @@ public class TenantController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER', 'ASESOR', 'MECANICO')")
     @Operation(summary = "Obtener detalles de un taller por su ID")
-    public ResponseEntity<TenantResponse> getTenantById(@PathVariable UUID id) {
+    public ResponseEntity<TenantResponse> getTenantById(@PathVariable UUID id, Authentication authentication) {
+        verificarAcceso(id, authentication);
         TenantResult result = getTenantDetailsUseCase.getById(id);
         return ResponseEntity.ok(toResponse(result));
     }
 
     @PutMapping("/{id}/plan")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @Operation(summary = "Cambiar plan de suscripción del taller")
     public ResponseEntity<TenantResponse> changePlan(
             @PathVariable UUID id,
@@ -106,10 +123,14 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Suspender o reactivar un taller")
     public ResponseEntity<TenantResponse> updateStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateTenantStatusRequest request) {
+            @Valid @RequestBody UpdateTenantStatusRequest request,
+            Authentication authentication) {
+        verificarAcceso(id, authentication);
+
         TenantResult result;
         if ("SUSPEND".equalsIgnoreCase(request.action())) {
             result = suspendTenantUseCase.suspendTenant(id, request.reason());
@@ -122,10 +143,14 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/branding")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Actualizar personalización visual (Branding)")
     public ResponseEntity<TenantResponse> updateBranding(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateBrandingRequest request) {
+            @Valid @RequestBody UpdateBrandingRequest request,
+            Authentication authentication) {
+        verificarAcceso(id, authentication);
+
         UpdateBrandingCommand command = new UpdateBrandingCommand(
                 id,
                 request.commercialName(),
@@ -133,6 +158,33 @@ public class TenantController {
         );
         TenantResult result = updateBrandingUseCase.updateBranding(command);
         return ResponseEntity.ok(toResponse(result));
+    }
+
+    /**
+     * Un taller solo puede operar sobre si mismo. El superadministrador de la
+     * plataforma opera con alcance transversal.
+     */
+    private void verificarAcceso(UUID tenantIdSolicitado, Authentication authentication) {
+        UUID tenantDelContexto = TenantContextHolder.getTenantId();
+        if (tenantDelContexto == null) {
+            throw new TenantContextMissingException(
+                    "La operacion requiere un contexto de taller establecido y no lo tiene.");
+        }
+        if (tenantDelContexto.equals(tenantIdSolicitado)) {
+            return;
+        }
+        if (esSuperAdmin(authentication)) {
+            return;
+        }
+        throw new TenantAccessDeniedException(tenantDelContexto, tenantIdSolicitado);
+    }
+
+    private boolean esSuperAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_SUPERADMIN".equals(authority.getAuthority()));
     }
 
     private TenantResponse toResponse(TenantResult result) {

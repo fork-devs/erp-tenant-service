@@ -1,6 +1,7 @@
 package com.erp.tenant.application.service;
 
 import com.erp.tenant.application.dto.command.ChangePlanCommand;
+import com.erp.tenant.application.logging.SecurityEventLogger;
 import com.erp.tenant.application.dto.command.UpdateBrandingCommand;
 import com.erp.tenant.application.dto.result.TenantLimitsResult;
 import com.erp.tenant.application.dto.result.TenantResult;
@@ -19,6 +20,8 @@ import com.erp.tenant.domain.model.TenantOutboxMessage;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
+import com.erp.tenant.domain.port.UnitOfWork;
+import com.erp.tenant.infrastructure.messaging.DomainEventSerializer;
 import com.erp.tenant.domain.valueobject.BrandColor;
 import com.erp.tenant.domain.valueobject.TenantId;
 
@@ -38,14 +41,20 @@ public class TenantManagementService implements
     private final TenantRepositoryPort tenantRepositoryPort;
     private final PlanRepositoryPort planRepositoryPort;
     private final TenantOutboxRepositoryPort outboxRepositoryPort;
+    private final UnitOfWork unitOfWork;
+    private final DomainEventSerializer eventSerializer;
 
     public TenantManagementService(
             TenantRepositoryPort tenantRepositoryPort,
             PlanRepositoryPort planRepositoryPort,
-            TenantOutboxRepositoryPort outboxRepositoryPort) {
+            TenantOutboxRepositoryPort outboxRepositoryPort,
+            UnitOfWork unitOfWork,
+            DomainEventSerializer eventSerializer) {
         this.tenantRepositoryPort = tenantRepositoryPort;
         this.planRepositoryPort = planRepositoryPort;
         this.outboxRepositoryPort = outboxRepositoryPort;
+        this.unitOfWork = unitOfWork;
+        this.eventSerializer = eventSerializer;
     }
 
     @Override
@@ -55,43 +64,42 @@ public class TenantManagementService implements
         }
 
         TenantId tenantId = new TenantId(command.tenantId());
-        Tenant tenant = tenantRepositoryPort.findById(tenantId)
-                .orElseThrow(() -> new TenantNotFoundException(command.tenantId().toString()));
 
-        UUID oldPlanId = tenant.getPlanId();
-        Plan newPlan = resolveNewPlan(command);
+        // El cambio de plan y su evento se confirman juntos.
+        return unitOfWork.callInTransaction(() -> {
+            Tenant tenant = tenantRepositoryPort.findById(tenantId)
+                    .orElseThrow(() -> new TenantNotFoundException(command.tenantId().toString()));
 
-        tenant.changePlan(newPlan.getId());
-        Tenant updatedTenant = tenantRepositoryPort.save(tenant);
+            UUID oldPlanId = tenant.getPlanId();
+            Plan newPlan = resolveNewPlan(command);
 
-        // Publicar evento en Outbox
-        TenantPlanChangedEvent event = new TenantPlanChangedEvent(
-                updatedTenant.getId().getValue(),
-                oldPlanId,
-                newPlan.getId(),
-                newPlan.getCode().name(),
-                newPlan.getMaxUsers(),
-                newPlan.getMaxVehicles(),
-                newPlan.getMaxIotMsgPerDay()
-        );
+            tenant.changePlan(newPlan.getId());
+            Tenant updatedTenant = tenantRepositoryPort.save(tenant);
 
-        String payload = String.format(
-                "{\"eventId\":\"%s\",\"eventType\":\"%s\",\"tenantId\":\"%s\",\"oldPlanId\":\"%s\",\"newPlanId\":\"%s\",\"newPlanCode\":\"%s\",\"maxUsers\":%d,\"maxVehicles\":%d,\"maxIotMsgPerDay\":%d,\"occurredAt\":\"%s\"}",
-                event.getEventId(),
-                event.getEventType(),
-                event.getTenantId(),
-                event.getOldPlanId(),
-                event.getNewPlanId(),
-                event.getNewPlanCode(),
-                event.getNewMaxUsers(),
-                event.getNewMaxVehicles(),
-                event.getNewMaxIotMsgPerDay(),
-                event.getOccurredAt()
-        );
+            // Publicar evento en Outbox
+            TenantPlanChangedEvent event = new TenantPlanChangedEvent(
+                    updatedTenant.getId().getValue(),
+                    oldPlanId,
+                    newPlan.getId(),
+                    newPlan.getCode().name(),
+                    newPlan.getMaxUsers(),
+                    newPlan.getMaxVehicles(),
+                    newPlan.getMaxIotMsgPerDay()
+            );
 
-        outboxRepositoryPort.save(TenantOutboxMessage.of(updatedTenant.getId().getValue(), event.getEventType(), payload));
+            String payload = eventSerializer.serialize(event);
 
-        return toResult(updatedTenant, newPlan);
+            outboxRepositoryPort.save(TenantOutboxMessage.of(
+                    updatedTenant.getId().getValue(),
+                    updatedTenant.getId().getValue(),
+                    event.getEventId(),
+                    event.getEventType(),
+                    payload));
+
+            SecurityEventLogger.registrar("plan_taller_cambiado", updatedTenant.getId().getValue(), null, null, "ok",
+                    java.util.Map.of("plan", newPlan.getCode().name()));
+            return toResult(updatedTenant, newPlan);
+        });
     }
 
     @Override
@@ -100,22 +108,24 @@ public class TenantManagementService implements
             throw new IllegalArgumentException("TenantId es obligatorio");
         }
 
-        Tenant tenant = tenantRepositoryPort.findById(new TenantId(tenantId))
-                .orElseThrow(() -> new TenantNotFoundException(tenantId.toString()));
+        // La suspension y su evento se confirman juntos.
+        return unitOfWork.callInTransaction(() -> {
+            Tenant tenant = tenantRepositoryPort.findById(new TenantId(tenantId))
+                    .orElseThrow(() -> new TenantNotFoundException(tenantId.toString()));
 
-        tenant.suspend();
-        Tenant savedTenant = tenantRepositoryPort.save(tenant);
+            tenant.suspend();
+            Tenant savedTenant = tenantRepositoryPort.save(tenant);
 
-        TenantSuspendedEvent event = new TenantSuspendedEvent(tenantId, savedTenant.getRuc().getValue(), reason != null ? reason : "Suspensión administrativa");
-        String payload = String.format(
-                "{\"eventId\":\"%s\",\"eventType\":\"%s\",\"tenantId\":\"%s\",\"ruc\":\"%s\",\"reason\":\"%s\",\"occurredAt\":\"%s\"}",
-                event.getEventId(), event.getEventType(), event.getTenantId(), event.getRuc(), event.getReason().replace("\"", "\\\""), event.getOccurredAt()
-        );
+            TenantSuspendedEvent event = new TenantSuspendedEvent(tenantId, savedTenant.getRuc().getValue(),
+                    reason != null ? reason : "Suspensión administrativa");
+            String payload = eventSerializer.serialize(event);
 
-        outboxRepositoryPort.save(TenantOutboxMessage.of(tenantId, event.getEventType(), payload));
+            outboxRepositoryPort.save(TenantOutboxMessage.of(
+                    tenantId, tenantId, event.getEventId(), event.getEventType(), payload));
 
-        Plan plan = planRepositoryPort.findById(savedTenant.getPlanId()).orElse(null);
-        return toResult(savedTenant, plan);
+            Plan plan = planRepositoryPort.findById(savedTenant.getPlanId()).orElse(null);
+            return toResult(savedTenant, plan);
+        });
     }
 
     @Override

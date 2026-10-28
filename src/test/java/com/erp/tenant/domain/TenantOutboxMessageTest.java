@@ -15,8 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * El estado de un mensaje de la bandeja de salida: los intentos, la espera
- * creciente y el paso a cola de muertos.
+ * Tests outbox message lifecycle: retry attempts, exponential backoff, and transition to DLQ.
  */
 class TenantOutboxMessageTest {
 

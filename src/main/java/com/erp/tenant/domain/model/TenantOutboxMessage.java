@@ -7,18 +7,17 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Mensaje pendiente de publicar en el bus de eventos.
+ * Message pending publication on the event bus.
  *
- * <p>El identificador del evento viaja en el mensaje y no se regenera en cada
- * reintento, de modo que un consumidor pueda deduplicar: la entrega es al
- * menos una vez, y el identificador es lo que hace la deduplicacion posible.
+ * <p>The event ID travels inside the message and is not regenerated across retries,
+ * ensuring consumers can deduplicate: delivery is at-least-once, and the immutable event ID
+ * enables deterministic idempotency.
  */
 public class TenantOutboxMessage implements Serializable {
 
     /**
-     * Escala de esperas entre reintentos, en segundos. Es creciente y llega
-     * hasta 24 horas, que es la ventana de recuperacion prevista para un
-     * proveedor en modo degradado.
+     * Exponential backoff scale between retry attempts in seconds. Ascending up to 24 hours,
+     * matching the recovery window for degraded brokers.
      */
     private static final long[] BACKOFF_SECONDS = {5, 30, 300, 1800, 7200, 28800, 86400};
 
@@ -78,10 +77,9 @@ public class TenantOutboxMessage implements Serializable {
     }
 
     /**
-     * Registra un fallo de publicacion: incrementa el contador, guarda el
-     * error y programa el proximo reintento con una espera creciente. Al
-     * alcanzar el maximo de intentos, el mensaje pasa a cola de muertos y deja
-     * de reintentarse solo, pero se conserva.
+     * Records a publication failure: increments attempt count, saves error details,
+     * and schedules the next retry with exponential backoff. Upon reaching max attempts,
+     * the message moves to the Dead Letter Queue (DLQ).
      */
     public void recordFailure(String error, int maxAttempts, Duration maxDelay) {
         this.attempts++;
@@ -98,8 +96,7 @@ public class TenantOutboxMessage implements Serializable {
     }
 
     /**
-     * Devuelve el mensaje a la cola de pendientes, con el contador
-     * restablecido, para que vuelva a intentarse.
+     * Returns the message to the pending queue with a reset attempt counter for manual retry.
      */
     public void reactivate() {
         this.attempts = 0;
@@ -109,8 +106,7 @@ public class TenantOutboxMessage implements Serializable {
     }
 
     /**
-     * Espera hasta el proximo intento. Es creciente con el numero de
-     * intentos y nunca supera el maximo configurado.
+     * Wait duration until the next attempt. Increases with retry count and never exceeds max backoff.
      */
     public Duration nextDelay(Duration maxDelay) {
         int index = Math.min(Math.max(attempts - 1, 0), BACKOFF_SECONDS.length - 1);

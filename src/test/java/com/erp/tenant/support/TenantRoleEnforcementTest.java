@@ -24,13 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Las operaciones de administracion de talleres declaran el rol que exigen.
- *
- * <p>Un endpoint sin rol declarado es un endpoint accesible a cualquier
- * principal autenticado. La declaracion explicita hace que el contrato sea
- * visible.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P1 6.19.
+ * Integration tests verifying explicit security role declarations on tenant administration endpoints.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

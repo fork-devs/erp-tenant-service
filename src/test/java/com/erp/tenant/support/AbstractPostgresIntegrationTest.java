@@ -5,11 +5,9 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * Base de los tests de integracion del servicio de tenants.
+ * Base integration test class for tenant-service.
  *
- * <p>Arranca PostgreSQL real en proceso y conecta la aplicacion con el rol de
- * runtime {@code erp_app}. Las migraciones de Flyway las ejecuta el
- * propietario.
+ * <p>Starts embedded PostgreSQL and configures DataSource connection with runtime credentials.
  */
 @SpringBootTest
 public abstract class AbstractPostgresIntegrationTest {
@@ -31,9 +29,8 @@ public abstract class AbstractPostgresIntegrationTest {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.flyway.enabled", () -> "true");
 
-        // El servicio valida el token contra el JWKS del emisor de
-        // credenciales. Los tests levantan su propio emisor, de modo que los
-        // tokens que se usan estan realmente firmados.
+        // The service validates tokens against the issuer JWKS endpoint.
+        // Tests run an embedded JWKS server with signed tokens.
         registry.add("erp.security.jwks-url", TestJwksServer::jwksUrl);
     }
 }

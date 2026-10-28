@@ -17,11 +17,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Aislamiento entre talleres en los endpoints de administracion.
+ * Tenant isolation security tests on administrative endpoints.
  *
- * <p>El atacante es el administrador del taller A y la victima es el taller B.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * <p>Ensures that an admin of Tenant A cannot query or mutate Tenant B (403 Forbidden).
  */
 @AutoConfigureMockMvc
 class CrossTenantAccessTest extends AbstractPostgresIntegrationTest {

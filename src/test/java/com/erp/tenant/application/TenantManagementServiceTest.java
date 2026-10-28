@@ -45,9 +45,8 @@ class TenantManagementServiceTest {
     private TenantOutboxRepositoryPort outboxRepositoryPort;
 
     /**
-     * UnitOfWork de prueba: ejecuta la operacion en linea. La demarcacion
-     * transaccional como tal se verifica en los tests de integracion; aqui lo
-     * que importa es que el caso de uso delega la atomicidad en el puerto.
+     * Test UnitOfWork: executes operations inline. Transactional demarcation is verified
+     * in integration tests; this verifies proper delegation to the port.
      */
     private static final com.erp.tenant.domain.port.UnitOfWork DIRECTO = new com.erp.tenant.domain.port.UnitOfWork() {
         @Override

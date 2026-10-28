@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * El relay no se bloquea con un mensaje envenenado y registra cada fallo.
+ * Verifies that the outbox relay does not block on poisoned messages and properly records failures.
  */
 @ExtendWith(MockitoExtension.class)
 class OutboxProcessorServiceTest {

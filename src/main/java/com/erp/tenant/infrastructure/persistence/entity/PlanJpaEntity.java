@@ -28,8 +28,7 @@ public class PlanJpaEntity {
     private Integer maxIotMsgPerDay;
 
     /**
-     * Limites de TRAFICO del plan: peticiones por minuto y conexiones
-     * concurrentes. Son parte del plan (ADR-007) y los aplica el gateway.
+     * Traffic limits of the plan: requests per minute and concurrent connections (ADR-007).
      */
     @Column(name = "max_requests_per_minute", nullable = false)
     private Integer maxRequestsPerMinute;

@@ -8,11 +8,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.function.Supplier;
 
 /**
- * Implementacion del limite transaccional sobre {@link TransactionTemplate}.
+ * Unit of work implementation backed by Spring's {@link TransactionTemplate}.
  *
- * <p>La plantilla usa la propagacion por defecto: si ya hay una transaccion
- * abierta, la operacion se une a ella en lugar de abrir otra. Eso es lo que
- * permite anidar demarcaciones sin crear transacciones independientes.
+ * <p>Uses default REQUIRED propagation so nested operations participate in active transactions.
  */
 @Component
 public class UnitOfWorkAdapter implements UnitOfWork {

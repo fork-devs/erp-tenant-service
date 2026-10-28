@@ -16,11 +16,10 @@ import java.util.UUID;
 public interface SpringDataTenantOutboxRepository extends JpaRepository<TenantOutboxJpaEntity, UUID> {
 
     /**
-     * Mensajes pendientes cuya proxima publicacion ya toca.
+     * Retrieves pending outbox messages ready for retry using exclusive row locking.
      *
-     * <p>La reclamacion es EXCLUSIVA: {@code FOR UPDATE SKIP LOCKED} hace
-     * que dos instancias del relay obtengan conjuntos disjuntos, de modo que
-     * ninguna publique dos veces el mismo mensaje.
+     * <p>Enforces exclusive claiming via {@code FOR UPDATE SKIP LOCKED} so concurrent
+     * relay workers obtain disjoint sets without double-publishing messages.
      */
     @Query(value = "SELECT * FROM tenant_outbox "
             + "WHERE status = 'PENDING' AND next_attempt_at <= :now "

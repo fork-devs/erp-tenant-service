@@ -9,16 +9,12 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Registro estructurado de los eventos de seguridad.
+ * Structured security event audit logger.
  *
- * <p>El esquema es el MISMO que en el servicio de autenticacion:
- *
+ * <p>Matches the canonical audit log format across all services:
  * <pre>
  * evento=... tenant_id=... user_id=... trace_id=... resultado=... timestamp=...
  * </pre>
- *
- * <p>El esquema no admite contrasenas, tokens ni secretos: no hay ningun
- * parametro para ellos, de modo que no se pueden colar por descuido.
  */
 public final class SecurityEventLogger {
 

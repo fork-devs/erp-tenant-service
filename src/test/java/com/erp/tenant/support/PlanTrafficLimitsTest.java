@@ -16,14 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Los limites de TRAFICO del plan (peticiones por minuto y conexiones
- * concurrentes) los posee el tenant-service, que es el dueño del plan.
- *
- * <p>El gateway los aplica como cuota, de modo que si aqui no estan, el
- * gateway tiene que inventarlos: y entonces la promesa comercial del plan
- * tiene dos dueños y deriva sin que nadie lo note (ADR-007, hallazgo 6.9).
- *
- * <p>Ver docs/adr/ADR-007-quien-posee-los-limites-del-plan.md.
+ * Integration tests verifying subscription plan traffic limits owned by tenant-service (ADR-007).
  */
 @AutoConfigureMockMvc
 class PlanTrafficLimitsTest extends AbstractPostgresIntegrationTest {

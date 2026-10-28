@@ -26,11 +26,10 @@ public class PlanController {
     }
 
     @GetMapping
-    // El catalogo de planes es publico: lo consulta el cliente antes de
-    // iniciar sesion, para mostrar los planes disponibles. No es una
-    // operacion de administracion.
+    // The subscription plans catalog is public: queried by clients before login
+    // to display available tiers. It is not an administrative operation.
     @PreAuthorize("permitAll()")
-    @Operation(summary = "Listar todos los planes de suscripción configurados")
+    @Operation(summary = "List all configured subscription plans")
     public ResponseEntity<List<PlanResponse>> listPlans() {
         List<PlanResponse> responses = listPlansUseCase.listAllPlans().stream()
                 .map(this::toResponse)

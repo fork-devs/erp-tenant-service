@@ -20,22 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Comprobacion automatizada de la demarcacion transaccional.
+ * Automated architectural test for transaction demarcation boundaries.
  *
- * <p>Verifica las dos propiedades que sostienen el modelo:
- *
+ * <p>Verifies two core architectural invariants:
  * <ol>
- *   <li>Ningun adaptador de persistencia declara demarcacion propia. Solo se
- *       admite {@code @Transactional(readOnly = true)} en las lecturas.</li>
- *   <li>Ningun caso de uso escribe en un repositorio sin pasar por el puerto
- *       {@code UnitOfWork}.</li>
+ *   <li>Persistence adapters must not declare their own write transactions.</li>
+ *   <li>Use cases writing to repositories must execute within a UnitOfWork boundary.</li>
  * </ol>
- *
- * <p>La comprobacion es sobre el CODIGO FUENTE y no sobre el contexto de
- * Spring: asi puede ejecutarse sin levantar la aplicacion, y sigue siendo
- * valida aunque nadie recuerde ejecutarla a mano.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgos P0 5.3 y P0 5.8.
  */
 class TransactionDemarcationArchitectureTest {
 
@@ -44,14 +35,14 @@ class TransactionDemarcationArchitectureTest {
     private static final Path APLICACION = Paths.get(
             "src/main/java/com/erp/tenant/application");
 
-    /** Una declaracion de demarcacion que no sea de solo lectura. */
+    /** Non-read-only transactional demarcation declaration. */
     private static final Pattern TRANSACCIONAL = Pattern.compile("@Transactional\\b");
 
-    /** Una declaracion de solo lectura, que si se admite. */
+    /** Read-only transactional demarcation declaration. */
     private static final Pattern SOLO_LECTURA = Pattern.compile(
             "@Transactional\\s*\\(\\s*readOnly\\s*=\\s*true\\s*\\)");
 
-    /** Una escritura a un puerto de repositorio. */
+    /** A write operation to a repository port. */
     private static final Pattern ESCRITURA = Pattern.compile(
             "\\b(\\w+RepositoryPort)\\s*\\.\\s*(save|deleteById|revoke\\w*|invalidate\\w*|update\\w*|mark\\w*)\\s*\\(");
 

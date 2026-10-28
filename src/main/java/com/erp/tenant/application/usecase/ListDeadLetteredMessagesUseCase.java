@@ -6,9 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Consulta de los mensajes de la bandeja de salida que agotaron sus
- * intentos. Ya no se reintentan solos, pero se conservan: son la evidencia de
- * un evento que el sistema afirma haber producido y que nunca llego al bus.
+ * Use case for listing Dead Letter Queue (DLQ) outbox messages that exceeded max retry attempts.
  */
 public interface ListDeadLetteredMessagesUseCase {
 

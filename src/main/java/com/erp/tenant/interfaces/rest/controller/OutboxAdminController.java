@@ -20,11 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Administracion de la cola de mensajes agotados de la bandeja de salida.
- *
- * <p>Un mensaje agotado ya no se reintenta solo, pero se conserva: es la
- * evidencia de un evento que el sistema afirma haber producido y que nunca
- * llego al bus. Se puede reactivar para que vuelva a intentarse.
+ * Administrative controller for inspecting and reactivating Dead Letter Queue (DLQ) outbox messages.
  */
 @RestController
 @RequestMapping("/api/v1/admin/outbox")

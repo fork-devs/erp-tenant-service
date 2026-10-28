@@ -15,6 +15,6 @@ public class LogEventPublisherAdapter implements EventPublisherPort {
     public void publish(TenantOutboxMessage message) {
         log.info("[OUTBOX-RELAY] Despachando evento de dominio '{}' para aggregateId='{}': {}",
                 message.getEventType(), message.getAggregateId(), message.getPayload());
-        // Aquí se conectará al KafkaProducer cuando el broker esté configurado en fases posteriores
+        // Connects to KafkaProducer when message broker is configured in later phases
     }
 }

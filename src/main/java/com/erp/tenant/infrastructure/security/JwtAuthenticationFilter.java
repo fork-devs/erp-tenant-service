@@ -22,15 +22,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Valida el token de acceso que reenvia el borde y establece el contexto de
- * taller.
+ * Validates JWT access tokens from edge gateways and establishes the tenant execution context.
  *
- * <p>El tenant se deriva EXCLUSIVAMENTE del claim {@code tenant_id} de un
- * token verificado. La cabecera {@code X-Tenant-ID} es una pista: si viene, se
- * contrasta con el tenant del token y la peticion se rechaza cuando no
- * coinciden.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgos P0 5.2 y P0 5.4.
+ * <p>Tenant identity is derived strictly from the verified JWT token claims. Any X-Tenant-ID
+ * header is cross-checked to ensure it matches the token claims.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

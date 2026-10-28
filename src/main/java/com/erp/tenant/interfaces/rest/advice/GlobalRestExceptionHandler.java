@@ -109,9 +109,7 @@ public class GlobalRestExceptionHandler {
     }
 
     /**
-     * La denegacion de la seguridad a nivel de metodo se resuelve aqui y no en
-     * el filtro de seguridad: el resolutor de excepciones del dispatcher la
-     * intercepta antes de que llegue al filtro.
+     * Handles method-level authorization denials intercepted prior to filter chain resolution.
      */
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ProblemDetail> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
@@ -160,8 +158,7 @@ public class GlobalRestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex) {
-        // El error interno se registra con el esquema estructurado y con su
-        // traza. La respuesta al cliente no cambia: sigue siendo generica.
+        // Internal server errors are logged with structured context and stack trace.
         com.erp.tenant.application.logging.SecurityEventLogger.registrar(
                 "error_interno", null, null, null, "fallo",
                 java.util.Map.of("error", ex.getClass().getSimpleName()));

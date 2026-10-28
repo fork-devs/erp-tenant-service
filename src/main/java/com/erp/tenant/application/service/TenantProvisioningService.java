@@ -53,26 +53,23 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
 
         Ruc ruc = Ruc.of(command.ruc());
 
-        // El taller y el evento de dominio se confirman juntos: si la
-        // escritura del evento falla, el taller tampoco se crea. Sin este
-        // limite, cada llamada a un repositorio abria su propia transaccion y
-        // un fallo intermedio dejaba un taller sin su evento, que es un
-        // estado que nadie puede recuperar.
+        // Workshop creation and domain event persist atomically in the transactional outbox:
+        // failure to enqueue the event rolls back tenant creation entirely.
         return unitOfWork.callInTransaction(() -> {
             if (tenantRepositoryPort.existsByRuc(ruc)) {
                 throw new RucAlreadyExistsException(ruc.getValue());
             }
 
-            // Resolver Plan
+            // Resolve Plan
             Plan plan = resolvePlan(command);
 
             BrandColor brandColor = BrandColor.of(command.brandColor());
             Tenant tenant = Tenant.create(command.commercialName(), ruc, plan.getId(), brandColor);
 
-            // 1. Guardar Tenant en PostgreSQL
+            // 1. Persist Tenant aggregate root
             Tenant savedTenant = tenantRepositoryPort.save(tenant);
 
-            // 2. Crear Evento de Dominio TenantProvisioned
+            // 2. Create TenantProvisioned domain event
             TenantProvisionedEvent event = new TenantProvisionedEvent(
                     savedTenant.getId().getValue(),
                     savedTenant.getCommercialName(),
@@ -85,7 +82,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
 
             String payloadJson = eventSerializer.serialize(event);
 
-            // 3. Guardar en la Transactional Outbox, en la MISMA transaccion
+            // 3. Persist to Transactional Outbox within the same transaction
             TenantOutboxMessage outboxMessage = TenantOutboxMessage.of(
                     savedTenant.getId().getValue(),
                     savedTenant.getId().getValue(),
@@ -121,7 +118,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
             return planRepositoryPort.findByCode(planCode)
                     .orElseThrow(() -> new PlanNotFoundException(planCode.name()));
         }
-        // Plan por defecto
+        // Default subscription plan
         return planRepositoryPort.findByCode(PlanCode.BASICO)
                 .orElseThrow(() -> new PlanNotFoundException("BASICO"));
     }

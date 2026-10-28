@@ -18,13 +18,12 @@ public class Plan implements Serializable {
     public Plan(UUID id, PlanCode code, int maxUsers, int maxVehicles, int maxIotMsgPerDay,
                 int maxRequestsPerMinute, int maxConcurrentSlots, BigDecimal priceMonthly) {
         if (id == null || code == null || priceMonthly == null) {
-            throw new IllegalArgumentException("Campos requeridos de Plan no pueden ser nulos");
+            throw new IllegalArgumentException("Required fields of Plan cannot be null");
         }
         if (maxRequestsPerMinute <= 0 || maxConcurrentSlots <= 0) {
-            // Un plan sin limites de trafico no es un plan valido: el gateway
-            // los aplica como cuota, y un limite de cero o negativo lo
-            // dejaria sin poder trabajar (ADR-007).
-            throw new IllegalArgumentException("Los limites de trafico del Plan deben ser positivos");
+            // A plan without traffic limits is invalid: the gateway enforces them
+            // as quotas; a zero or negative limit would render the tenant unusable (ADR-007).
+            throw new IllegalArgumentException("Traffic limits of Plan must be positive");
         }
         this.id = id;
         this.code = code;
@@ -57,16 +56,14 @@ public class Plan implements Serializable {
     }
 
     /**
-     * Peticiones por minuto que el plan permite. Lo aplica el gateway como
-     * cuota de trafico (ADR-007).
+     * Requests per minute permitted by the plan. Enforced by the gateway as a rate quota (ADR-007).
      */
     public int getMaxRequestsPerMinute() {
         return maxRequestsPerMinute;
     }
 
     /**
-     * Conexiones concurrentes que el plan permite. Lo aplica el gateway como
-     * mamparo por taller (ADR-007).
+     * Concurrent connections permitted by the plan. Enforced by the gateway as a per-tenant bulkhead (ADR-007).
      */
     public int getMaxConcurrentSlots() {
         return maxConcurrentSlots;

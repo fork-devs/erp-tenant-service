@@ -19,28 +19,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Cliente del conjunto de claves publicas del emisor de credenciales.
+ * Client for public JSON Web Key Sets (JWKS) published by auth-service.
  *
- * <p>Tres propiedades que el cliente de otros servicios no tiene y que aqui
- * son requisito:
- *
+ * <p>Enforces three key security invariants:
  * <ul>
- *   <li><strong>Refresco por intervalo antes de devolver una clave known</strong>
- *       (<em>known</em>): devolver la clave cacheada sin comprobar la vigencia
- *       de la cache hacia que, con un identificador de clave constante, el
- *       verificador nunca volviera a descargar el conjunto. Con la rotacion
- *       de claves, eso significaba rechazar el 100% de los tokens emitidos
- *       tras una rotacion.</li>
- *   <li><strong>Fallo cerrado ante clave desconocida</strong>: si el
- *       identificador no esta en el conjunto publicado, el token se rechaza.
- *       No se verifica contra ninguna otra clave, que es lo que hacia el
- *       verificador de otros servicios.</li>
- *   <li><strong>Tiempo de espera y reintento acotado</strong>: la descarga
- *       tiene tiempo de espera de conexion y de lectura, y un fallo no
- *       dispara una descarga por peticion.</li>
+ *   <li><strong>Interval-based cache refresh:</strong> refreshes cached keys when stale to support key rotation without service restart.</li>
+ *   <li><strong>Fail-closed on unknown key ID:</strong> unknown key IDs are rejected rather than falling back to unverified defaults.</li>
+ *   <li><strong>Bounded timeouts and backoff:</strong> bounded connection and read timeouts prevent cascading outages on issuer latency.</li>
  * </ul>
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgos P0 5.6 y P0 5.12.
  */
 @Component
 public class JwksKeyManager {
@@ -67,8 +53,7 @@ public class JwksKeyManager {
     }
 
     /**
-     * Devuelve la clave publica del identificador, o null si no esta publicada.
-     * Un null significa que el token debe rechazarse.
+     * Returns the public key for the given key ID (kid), or null if unknown.
      */
     public RSAPublicKey getPublicKey(String keyId) {
         refrescarSiHaCaducado(false);
@@ -78,8 +63,7 @@ public class JwksKeyManager {
             return key;
         }
 
-        // Identificador desconocido: puede tratarse de una clave recien
-        // rotada, asi que se fuerza un refresco antes de rendirse.
+        // Unknown key ID: may indicate a recently rotated key, force refresh before rejecting.
         refrescarSiHaCaducado(true);
         return keyId != null ? publicKeys.get(keyId) : null;
     }
@@ -92,7 +76,7 @@ public class JwksKeyManager {
                 return;
             }
             if (lastAttempt.plusSeconds(MIN_RETRY_SECONDS).isAfter(now)) {
-                // Ya se intento hace poco: no se vuelve a golpear al emisor.
+                // Recently attempted: avoid hitting the issuer repeatedly.
                 return;
             }
         }

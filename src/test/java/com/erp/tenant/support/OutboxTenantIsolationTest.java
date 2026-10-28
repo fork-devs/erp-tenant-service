@@ -15,11 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * El mensaje de la bandeja de salida lleva el taller al que pertenece.
- *
- * <p>Sin esa columna, la cola de eventos no podia filtrarse por taller, y el
- * payload contiene el RUC y la razon social del taller. Ver
- * docs/doc-estado-implementacion.md, hallazgo P1 6.14.
+ * Verifies that outbox messages carry their originating tenant identifier.
  */
 class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
 
@@ -33,7 +29,7 @@ class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
     private UnitOfWork unitOfWork;
 
     @Test
-    void elMensajeDelOutboxLlevaElTallerDelTenantCreado() {
+    void outboxMessageCarriesTenantIdOfCreatedTenant() {
         TenantResult result = tenantProvisioningService.provisionTenant(new ProvisionTenantCommand(
                 "Taller de Prueba",
                 "20601234567",
@@ -41,20 +37,18 @@ class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
                 null,
                 "#1A2B3C"));
 
-        // La reclamacion de la fila se hace dentro de un limite transaccional:
-        // SELECT ... FOR UPDATE SKIP LOCKED no se ejecuta en una transaccion
-        // de solo lectura.
-        List<TenantOutboxMessage> pendientes = unitOfWork.callInTransaction(
+        // Row claiming executes within an active writable transaction boundary.
+        List<TenantOutboxMessage> pending = unitOfWork.callInTransaction(
                 () -> outboxRepositoryPort.findPending(java.time.Instant.now(), 50));
 
-        assertTrue(pendientes.stream().anyMatch(m ->
+        assertTrue(pending.stream().anyMatch(m ->
                         m.getTenantId().equals(result.id())
                                 && m.getAggregateId().equals(result.id())),
-                "El mensaje del evento de dominio debe llevar el identificador del taller");
+                "Domain event outbox message must carry the tenant identifier");
     }
 
     @Test
-    void laMigracionAplicaLaColumnaDeTenantEnLaBandejaDeSalida() throws Exception {
+    void migrationAppliesTenantColumnOnOutboxTable() throws Exception {
         try (var connection = EmbeddedPostgresSupport.openOwnerConnection();
              var statement = connection.createStatement();
              var rs = statement.executeQuery(

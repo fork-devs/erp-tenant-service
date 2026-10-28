@@ -65,7 +65,7 @@ public class TenantManagementService implements
 
         TenantId tenantId = new TenantId(command.tenantId());
 
-        // El cambio de plan y su evento se confirman juntos.
+        // Plan change and its domain event commit together atomically.
         return unitOfWork.callInTransaction(() -> {
             Tenant tenant = tenantRepositoryPort.findById(tenantId)
                     .orElseThrow(() -> new TenantNotFoundException(command.tenantId().toString()));
@@ -76,7 +76,7 @@ public class TenantManagementService implements
             tenant.changePlan(newPlan.getId());
             Tenant updatedTenant = tenantRepositoryPort.save(tenant);
 
-            // Publicar evento en Outbox
+            // Publish event to Transactional Outbox
             TenantPlanChangedEvent event = new TenantPlanChangedEvent(
                     updatedTenant.getId().getValue(),
                     oldPlanId,
@@ -105,10 +105,10 @@ public class TenantManagementService implements
     @Override
     public TenantResult suspendTenant(UUID tenantId, String reason) {
         if (tenantId == null) {
-            throw new IllegalArgumentException("TenantId es obligatorio");
+            throw new IllegalArgumentException("TenantId is required");
         }
 
-        // La suspension y su evento se confirman juntos.
+        // Tenant suspension and its domain event commit together atomically.
         return unitOfWork.callInTransaction(() -> {
             Tenant tenant = tenantRepositoryPort.findById(new TenantId(tenantId))
                     .orElseThrow(() -> new TenantNotFoundException(tenantId.toString()));

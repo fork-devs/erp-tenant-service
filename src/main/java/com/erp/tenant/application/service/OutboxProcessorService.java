@@ -13,23 +13,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Despacha los mensajes pendientes de la bandeja de salida.
+ * Application service that processes pending transactional outbox messages.
  *
- * <p>Tres propiedades que el relay anterior no tenia:
- *
- * <ul>
- *   <li>Un mensaje que falla <strong>no bloquea</strong> el resto de la cola.
- *       Antes, un solo mensaje envenenado detenia el lote entero de forma
- *       permanente, porque la cola se leia ordenada por fecha de creacion y el
- *       fallido siempre era el primero.</li>
- *   <li>Cada fallo <strong>queda registrado</strong> con su error, su numero
- *       de intento y la espera hasta el proximo. Antes la excepcion se
- *       tragaba sin dejar rastro.</li>
- *   <li>La publicacion ocurre <strong>fuera</strong> de la transaccion de
- *       negocio que confirmo el cambio, y con la transaccion de la bandeja
- *       de salida ya cerrada. Un fallo de publicacion no puede deshacer un
- *       cambio de negocio ya confirmado.</li>
- * </ul>
+ * <p>Ensures non-blocking error handling, exponential backoff retries,
+ * and external publication outside the local database transaction boundary.
  */
 public class OutboxProcessorService implements ProcessOutboxMessagesUseCase {
 
@@ -55,9 +42,8 @@ public class OutboxProcessorService implements ProcessOutboxMessagesUseCase {
 
     @Override
     public int processUnpublishedMessages(int batchSize) {
-        // La lectura con reclamacion de la fila se hace en su propia
-        // transaccion, que se cierra al salir de este metodo. La publicacion,
-        // por tanto, ya no forma parte de ninguna transaccion.
+        // Message claiming runs in its own short transaction. Publication
+        // occurs outside the database transaction boundary.
         List<TenantOutboxMessage> messages = unitOfWork.callInTransaction(
                 () -> outboxRepositoryPort.findPending(Instant.now(), batchSize));
 
@@ -69,9 +55,9 @@ public class OutboxProcessorService implements ProcessOutboxMessagesUseCase {
                 unitOfWork.runInTransaction(() -> outboxRepositoryPort.save(message));
                 published++;
             } catch (Exception e) {
-                // Un mensaje fallido no detiene el lote: se registra y se
-                // reprograma, y el siguiente mensaje se despacha igualmente.
-                log.warn("[OUTBOX-RELAY] No se pudo publicar el evento {} ({}). Intento {}/{}: {}",
+                // A failed message does not block the batch: it is recorded and
+                // rescheduled, and processing of subsequent messages continues.
+                log.warn("[OUTBOX-RELAY] Failed to publish outbox event {} ({}). Attempt {}/{}: {}",
                         message.getEventType(), message.getId(), message.getAttempts() + 1, maxAttempts, e.getMessage());
                 message.recordFailure(e.getMessage(), maxAttempts, maxDelay);
                 unitOfWork.runInTransaction(() -> outboxRepositoryPort.save(message));

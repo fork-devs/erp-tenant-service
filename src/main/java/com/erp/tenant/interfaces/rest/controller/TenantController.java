@@ -39,11 +39,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Endpoints de gestion de talleres.
+ * REST controller for workshop tenant lifecycle management.
  *
- * <p>Cada operacion comprueba que el taller solicitado sea el del principal
- * autenticado. La excepcion es el superadministrador de la plataforma, que
- * opera con alcance transversal.
+ * <p>Enforces tenant isolation ensuring tenants cannot operate on or query other workshops
+ * unless authorized with SUPERADMIN platform scope.
  */
 @RestController
 @RequestMapping("/api/v1/tenants")
@@ -161,8 +160,7 @@ public class TenantController {
     }
 
     /**
-     * Un taller solo puede operar sobre si mismo. El superadministrador de la
-     * plataforma opera con alcance transversal.
+     * Verifies that the authenticated principal has permission to operate on the target tenant.
      */
     private void verificarAcceso(UUID tenantIdSolicitado, Authentication authentication) {
         UUID tenantDelContexto = TenantContextHolder.getTenantId();

@@ -1,20 +1,19 @@
 package com.erp.tenant.domain.model;
 
 /**
- * Estado de un mensaje de la bandeja de salida.
+ * State of an outbox message.
  *
- * <p>El estado es explicito y no un booleano: con un booleano no se puede
- * distinguir un mensaje recien creado de uno que lleva horas fallando, ni
- * reconocer uno que ya no va a prosperar.
+ * <p>Explicit typed state replaces raw booleans to distinguish freshly enqueued messages
+ * from retrying or dead-lettered messages.
  */
 public enum TenantOutboxStatus {
 
-    /** Pendiente de publicar, con su proximo reintento programado. */
+    /** Pending publication, scheduled with its next retry timestamp. */
     PENDING,
 
-    /** Publicado en el bus. */
+    /** Successfully published to the event bus. */
     PUBLISHED,
 
-    /** Agotado sus intentos: ya no se reintenta solo, pero se conserva. */
+    /** Exhausted retry attempts: retained in Dead Letter Queue for inspection. */
     DEAD_LETTER
 }

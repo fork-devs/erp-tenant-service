@@ -1,10 +1,8 @@
 package com.erp.tenant.domain.exception;
 
 /**
- * Se lanza cuando un principal intenta operar sobre un taller distinto del
- * suyo y no tiene alcance transversal.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * Thrown when an authenticated principal attempts to access or mutate a tenant
+ * outside their assigned workshop without global platform scope.
  */
 public class TenantAccessDeniedException extends DomainException {
 

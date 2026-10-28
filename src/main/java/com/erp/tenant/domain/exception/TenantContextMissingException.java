@@ -1,10 +1,8 @@
 package com.erp.tenant.domain.exception;
 
 /**
- * Se lanza cuando una operacion que requiere un taller de contexto se
- * ejecuta sin contexto establecido.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * Thrown when an operation requiring an active tenant context is executed
+ * without a valid tenant set.
  */
 public class TenantContextMissingException extends DomainException {
 

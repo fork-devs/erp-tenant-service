@@ -18,14 +18,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Seguridad perimetral del servicio de tenants.
+ * Perimeter security configuration for tenant-service.
  *
- * <p>Los endpoints de negocio NO son publicos: exigen un token de acceso
- * verificado, del que se deriva el taller. Antes el comodin
- * {@code /api/v1/**} estaba en permitAll, con lo que cualquiera podia crear,
- * suspender, re-planificar o leer cualquier taller sin autenticarse.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * <p>Enforces authenticated JWT bearer validation on business endpoints and strict role checks.
  */
 @Configuration
 @EnableWebSecurity

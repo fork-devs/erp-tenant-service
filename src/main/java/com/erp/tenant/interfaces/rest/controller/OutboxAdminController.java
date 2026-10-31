@@ -39,7 +39,7 @@ public class OutboxAdminController {
     }
 
     @GetMapping("/dead-letters")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Consultar la cola de mensajes agotados",
             description = "Devuelve los mensajes de la bandeja de salida que agotaron sus intentos, con su ultimo error y su numero de intentos")
     public ResponseEntity<List<OutboxDeadLetterResponse>> listDeadLetters(
@@ -53,7 +53,7 @@ public class OutboxAdminController {
     }
 
     @PostMapping("/dead-letters/{id}/reactivate")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Reactivar un mensaje agotado",
             description = "Devuelve el mensaje a la cola de pendientes con el contador de intentos restablecido")
     public ResponseEntity<OutboxDeadLetterResponse> reactivate(@PathVariable UUID id) {

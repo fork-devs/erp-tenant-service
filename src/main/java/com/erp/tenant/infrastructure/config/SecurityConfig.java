@@ -42,7 +42,7 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
-                        .requestMatchers("/api/v1/internal/**").hasAnyRole("ADMIN_TALLER", "SUPERADMIN", "INTERNAL_SERVICE")
+                        .requestMatchers("/api/v1/internal/**").hasAnyRole("WORKSHOP_ADMIN", "ADMIN_TALLER", "SUPERADMIN", "INTERNAL_SERVICE")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().authenticated()
                 )

@@ -98,7 +98,7 @@ public class TenantController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER', 'ASESOR', 'MECANICO')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER', 'SERVICE_ADVISOR', 'ASESOR', 'TECHNICIAN', 'MECANICO')")
     @Operation(summary = "Obtener detalles de un taller por su ID")
     public ResponseEntity<TenantResponse> getTenantById(@PathVariable UUID id, Authentication authentication) {
         verificarAcceso(id, authentication);
@@ -122,7 +122,7 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Suspender o reactivar un taller")
     public ResponseEntity<TenantResponse> updateStatus(
             @PathVariable UUID id,
@@ -142,7 +142,7 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/branding")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Actualizar personalización visual (Branding)")
     public ResponseEntity<TenantResponse> updateBranding(
             @PathVariable UUID id,

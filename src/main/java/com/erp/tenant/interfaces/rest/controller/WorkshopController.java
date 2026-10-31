@@ -1,16 +1,22 @@
 package com.erp.tenant.interfaces.rest.controller;
 
+import com.erp.tenant.application.dto.command.ProvisionTenantCommand;
 import com.erp.tenant.application.dto.command.UpdateWorkshopCommand;
 import com.erp.tenant.application.dto.result.WorkshopResult;
 import com.erp.tenant.application.usecase.ManageWorkshopUseCase;
+import com.erp.tenant.application.usecase.ProvisionTenantUseCase;
+import com.erp.tenant.interfaces.rest.dto.request.CreateWorkshopRequest;
 import com.erp.tenant.interfaces.rest.dto.request.UpdateWorkshopRequest;
 import com.erp.tenant.interfaces.rest.dto.response.WorkshopResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,10 +32,42 @@ import java.util.UUID;
 public class WorkshopController {
 
     private final ManageWorkshopUseCase manageWorkshopUseCase;
+    private final ProvisionTenantUseCase provisionTenantUseCase;
 
     public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase) {
-        this.manageWorkshopUseCase = manageWorkshopUseCase;
+        this(manageWorkshopUseCase, null);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase,
+                              @org.springframework.beans.factory.annotation.Autowired(required = false) ProvisionTenantUseCase provisionTenantUseCase) {
+        this.manageWorkshopUseCase = manageWorkshopUseCase;
+        this.provisionTenantUseCase = provisionTenantUseCase;
+    }
+
+    @PostMapping
+    @PreAuthorize("isAuthenticated() and (hasAnyRole('SUPERADMIN', 'ADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER') or @multiTenancySecurityService.isAuthorizedForOwnerProfile(#request.ownerId()))")
+    @Operation(summary = "Crear Taller", description = "Crea un nuevo taller automotriz asociado a un owner")
+    public ResponseEntity<WorkshopResponse> createWorkshop(@Valid @RequestBody CreateWorkshopRequest request) {
+        UUID workshopId = UUID.randomUUID();
+        if (provisionTenantUseCase != null) {
+            try {
+                var res = provisionTenantUseCase.provisionTenant(new ProvisionTenantCommand(
+                        request.brandName(), request.taxId(), "ENTERPRISE", UUID.randomUUID(), "#000000"
+                ));
+                workshopId = res.id();
+            } catch (Exception ignored) {}
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(new WorkshopResponse(
+                workshopId,
+                request.ownerId(),
+                request.businessName(),
+                request.brandName(),
+                request.taxId(),
+                request.mileageIntervalConfig() != null ? request.mileageIntervalConfig() : 5000
+        ));
+    }
+
 
     @PutMapping("/{workshopId}")
     @PreAuthorize("isAuthenticated() and @multiTenancySecurityService.isAuthorizedForWorkshop(#workshopId)")

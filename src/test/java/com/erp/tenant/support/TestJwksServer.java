@@ -73,11 +73,15 @@ public final class TestJwksServer {
      * Signs an access token for the target tenant with designated roles.
      */
     public static String signToken(UUID tenantId, List<String> roles) {
+        return signToken(tenantId, UUID.randomUUID(), roles);
+    }
+
+    public static String signToken(UUID tenantId, UUID userId, List<String> roles) {
         start();
         try {
             Instant now = Instant.now();
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .subject(UUID.randomUUID().toString())
+                    .subject(userId != null ? userId.toString() : UUID.randomUUID().toString())
                     .claim("tenant_id", tenantId.toString())
                     .claim("roles", roles)
                     .issuer("https://auth.test.erp-automotriz.com")

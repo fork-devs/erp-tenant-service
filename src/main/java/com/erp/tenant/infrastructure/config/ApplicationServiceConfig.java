@@ -1,12 +1,21 @@
 package com.erp.tenant.infrastructure.config;
 
+import com.erp.tenant.application.service.BranchService;
+import com.erp.tenant.application.service.EmployeeProfileService;
 import com.erp.tenant.application.service.OutboxDeadLetterService;
 import com.erp.tenant.application.service.OutboxProcessorService;
+import com.erp.tenant.application.service.OwnerProfileService;
 import com.erp.tenant.application.service.PlanQueryService;
+import com.erp.tenant.application.service.ProfileService;
 import com.erp.tenant.application.service.TenantManagementService;
 import com.erp.tenant.application.service.TenantProvisioningService;
+import com.erp.tenant.application.service.WorkshopService;
 import com.erp.tenant.application.service.WorkshopSpecialtyService;
+import com.erp.tenant.domain.port.BranchRepositoryPort;
+import com.erp.tenant.domain.port.BranchSubscriptionRepositoryPort;
+import com.erp.tenant.domain.port.EmployeeProfileRepositoryPort;
 import com.erp.tenant.domain.port.EventPublisherPort;
+import com.erp.tenant.domain.port.OwnerProfileRepositoryPort;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
@@ -74,5 +83,43 @@ public class ApplicationServiceConfig {
             TenantOutboxRepositoryPort outboxRepositoryPort,
             UnitOfWork unitOfWork) {
         return new OutboxDeadLetterService(outboxRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public BranchService branchService(
+            BranchRepositoryPort branchRepositoryPort,
+            BranchSubscriptionRepositoryPort subscriptionRepositoryPort,
+            PlanRepositoryPort planRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new BranchService(branchRepositoryPort, subscriptionRepositoryPort, planRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public EmployeeProfileService employeeProfileService(
+            EmployeeProfileRepositoryPort employeeRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new EmployeeProfileService(employeeRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public OwnerProfileService ownerProfileService(
+            OwnerProfileRepositoryPort ownerRepositoryPort,
+            TenantRepositoryPort tenantRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public ProfileService profileService(
+            OwnerProfileRepositoryPort ownerRepositoryPort,
+            EmployeeProfileRepositoryPort employeeRepositoryPort) {
+        return new ProfileService(ownerRepositoryPort, employeeRepositoryPort);
+    }
+
+    @Bean
+    public WorkshopService workshopService(
+            TenantRepositoryPort tenantRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new WorkshopService(tenantRepositoryPort, unitOfWork);
     }
 }

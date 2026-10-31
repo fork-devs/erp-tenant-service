@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface SpringDataTenantRepository extends JpaRepository<TenantJpaEntity, UUID> {
     Optional<TenantJpaEntity> findByRuc(String ruc);
     boolean existsByRuc(String ruc);
+    java.util.List<TenantJpaEntity> findByOwnerId(UUID ownerId);
+    boolean existsByOwnerId(UUID ownerId);
 }

@@ -1,13 +1,22 @@
 package com.erp.tenant.interfaces.rest.advice;
 
+import com.erp.tenant.domain.exception.ActiveSubscriptionAlreadyExistsException;
+import com.erp.tenant.domain.exception.BranchCodeAlreadyExistsException;
+import com.erp.tenant.domain.exception.BranchNotFoundException;
+import com.erp.tenant.domain.exception.CannotDeleteOwnerWithWorkshopsException;
+import com.erp.tenant.domain.exception.DocumentAlreadyExistsException;
 import com.erp.tenant.domain.exception.DomainException;
-import com.erp.tenant.domain.exception.TenantAccessDeniedException;
-import com.erp.tenant.domain.exception.TenantContextMissingException;
+import com.erp.tenant.domain.exception.EmployeeNotFoundException;
 import com.erp.tenant.domain.exception.InvalidRucException;
+import com.erp.tenant.domain.exception.OwnerAlreadyExistsException;
+import com.erp.tenant.domain.exception.OwnerNotFoundException;
 import com.erp.tenant.domain.exception.PlanNotFoundException;
+import com.erp.tenant.domain.exception.ProfileNotFoundException;
 import com.erp.tenant.domain.exception.RucAlreadyExistsException;
 import com.erp.tenant.domain.exception.SpecialtyCodeAlreadyExistsException;
 import com.erp.tenant.domain.exception.SpecialtyNotFoundException;
+import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.domain.exception.TenantContextMissingException;
 import com.erp.tenant.domain.exception.TenantNotFoundException;
 import com.erp.tenant.domain.exception.TenantSuspendedException;
 import org.slf4j.Logger;
@@ -73,6 +82,37 @@ public class GlobalRestExceptionHandler {
         problem.setProperty("errorCode", ex.getErrorCode());
         problem.setProperty("timestamp", Instant.now());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
+    @ExceptionHandler({BranchNotFoundException.class, EmployeeNotFoundException.class, OwnerNotFoundException.class, ProfileNotFoundException.class})
+    public ResponseEntity<ProblemDetail> handleResourceNotFound(DomainException ex) {
+        String detail = ex.getMessage();
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, detail);
+        problem.setTitle("Recurso No Encontrado");
+        problem.setType(URI.create("https://errors.erp-automotive.pe/core/not-found"));
+        problem.setProperty("errorCode", "NOT_FOUND");
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
+    @ExceptionHandler(BranchCodeAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleBranchCodeExists(BranchCodeAlreadyExistsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Código de Sede Duplicado");
+        problem.setType(URI.create("https://errors.erp-automotive.pe/core/branch-code-exists"));
+        problem.setProperty("errorCode", "VALIDATION_ERROR");
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
+    }
+
+    @ExceptionHandler({DocumentAlreadyExistsException.class, ActiveSubscriptionAlreadyExistsException.class, CannotDeleteOwnerWithWorkshopsException.class, OwnerAlreadyExistsException.class})
+    public ResponseEntity<ProblemDetail> handleCoreConflict(DomainException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setTitle("Conflicto de Entidad");
+        problem.setType(URI.create("https://errors.erp-automotive.pe/core/conflict"));
+        problem.setProperty("errorCode", ex.getErrorCode());
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
     @ExceptionHandler(SpecialtyNotFoundException.class)

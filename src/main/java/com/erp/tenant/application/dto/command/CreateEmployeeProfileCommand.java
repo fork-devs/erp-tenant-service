@@ -1,0 +1,12 @@
+package com.erp.tenant.application.dto.command;
+
+import java.util.UUID;
+
+public record CreateEmployeeProfileCommand(
+        UUID userId,
+        String firstName,
+        String lastName,
+        String documentType,
+        String documentNumber,
+        String phone
+) {}

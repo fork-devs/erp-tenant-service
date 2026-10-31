@@ -10,4 +10,8 @@ public class TenantAccessDeniedException extends DomainException {
         super("TENANT_ACCESS_DENIED",
                 "El taller " + tallerSolicitado + " no es accesible desde el taller " + tenantDelPrincipal + ".");
     }
+
+    public TenantAccessDeniedException(String message) {
+        super("ACCESS_DENIED", message);
+    }
 }

@@ -5,11 +5,14 @@ import com.erp.tenant.application.service.OutboxProcessorService;
 import com.erp.tenant.application.service.PlanQueryService;
 import com.erp.tenant.application.service.TenantManagementService;
 import com.erp.tenant.application.service.TenantProvisioningService;
+import com.erp.tenant.application.service.WorkshopSpecialtyService;
 import com.erp.tenant.domain.port.EventPublisherPort;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
 import com.erp.tenant.domain.port.UnitOfWork;
+import com.erp.tenant.domain.port.WorkshopSpecialtyRepositoryPort;
+import com.erp.tenant.domain.port.WorkshopSpecialtyRevisionRepositoryPort;
 import com.erp.tenant.infrastructure.messaging.DomainEventSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -26,9 +29,18 @@ public class ApplicationServiceConfig {
             PlanRepositoryPort planRepositoryPort,
             TenantOutboxRepositoryPort outboxRepositoryPort,
             UnitOfWork unitOfWork,
-            DomainEventSerializer eventSerializer) {
+            DomainEventSerializer eventSerializer,
+            WorkshopSpecialtyRepositoryPort specialtyRepositoryPort) {
         return new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
-                unitOfWork, eventSerializer);
+                unitOfWork, eventSerializer, specialtyRepositoryPort);
+    }
+
+    @Bean
+    public WorkshopSpecialtyService workshopSpecialtyService(
+            WorkshopSpecialtyRepositoryPort specialtyRepositoryPort,
+            WorkshopSpecialtyRevisionRepositoryPort revisionRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new WorkshopSpecialtyService(specialtyRepositoryPort, revisionRepositoryPort, unitOfWork);
     }
 
     @Bean

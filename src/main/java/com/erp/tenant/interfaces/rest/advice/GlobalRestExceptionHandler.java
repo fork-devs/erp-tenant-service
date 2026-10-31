@@ -6,6 +6,8 @@ import com.erp.tenant.domain.exception.TenantContextMissingException;
 import com.erp.tenant.domain.exception.InvalidRucException;
 import com.erp.tenant.domain.exception.PlanNotFoundException;
 import com.erp.tenant.domain.exception.RucAlreadyExistsException;
+import com.erp.tenant.domain.exception.SpecialtyCodeAlreadyExistsException;
+import com.erp.tenant.domain.exception.SpecialtyNotFoundException;
 import com.erp.tenant.domain.exception.TenantNotFoundException;
 import com.erp.tenant.domain.exception.TenantSuspendedException;
 import org.slf4j.Logger;
@@ -71,6 +73,30 @@ public class GlobalRestExceptionHandler {
         problem.setProperty("errorCode", ex.getErrorCode());
         problem.setProperty("timestamp", Instant.now());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
+    @ExceptionHandler(SpecialtyNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleSpecialtyNotFound(SpecialtyNotFoundException ex) {
+        String detail = getMessage("error.tenant.specialty-not-found.detail", ex.getMessage());
+        String title = getMessage("error.tenant.specialty-not-found.title", "Especialidad No Encontrada");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, detail);
+        problem.setTitle(title);
+        problem.setType(URI.create("https://errors.erp-automotive.pe/tenant/specialty-not-found"));
+        problem.setProperty("errorCode", "NOT_FOUND");
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
+    @ExceptionHandler(SpecialtyCodeAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleSpecialtyCodeExists(SpecialtyCodeAlreadyExistsException ex) {
+        String detail = getMessage("error.tenant.specialty-code-exists.detail", ex.getMessage());
+        String title = getMessage("error.tenant.specialty-code-exists.title", "Código de Especialidad Duplicado");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setTitle(title);
+        problem.setType(URI.create("https://errors.erp-automotive.pe/tenant/specialty-code-exists"));
+        problem.setProperty("errorCode", "VALIDATION_ERROR");
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 
     @ExceptionHandler(PlanNotFoundException.class)

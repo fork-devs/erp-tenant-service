@@ -82,6 +82,50 @@ class OwnerProfileServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject owner creation when DNI is not found in RENIEC")
+    void shouldRejectOwnerCreationWhenDniNotFound() {
+        com.erp.tenant.domain.port.IdentityValidationPort identityPort = org.mockito.Mockito.mock(com.erp.tenant.domain.port.IdentityValidationPort.class);
+        ownerService = new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork, identityPort);
+
+        UUID userId = UUID.randomUUID();
+        CreateOwnerProfileCommand command = new CreateOwnerProfileCommand(
+                userId, "Fake", "Name", "DNI", "00000000", "+51987112233"
+        );
+
+        when(ownerRepositoryPort.existsByUserId(userId)).thenReturn(false);
+        when(ownerRepositoryPort.existsByDocumentNumber("00000000")).thenReturn(false);
+        when(identityPort.validateDni("00000000")).thenReturn(com.erp.tenant.domain.port.DniValidationResult.invalid("00000000"));
+
+        assertThatThrownBy(() -> ownerService.create(command))
+                .isInstanceOf(com.erp.tenant.domain.exception.DocumentNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("Should autofill official names when DNI is verified in RENIEC")
+    void shouldAutofillOfficialNamesWhenDniVerified() {
+        com.erp.tenant.domain.port.IdentityValidationPort identityPort = org.mockito.Mockito.mock(com.erp.tenant.domain.port.IdentityValidationPort.class);
+        ownerService = new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork, identityPort);
+
+        UUID userId = UUID.randomUUID();
+        CreateOwnerProfileCommand command = new CreateOwnerProfileCommand(
+                userId, "Dummy", "User", "DNI", "70514079", "+51987112233"
+        );
+
+        when(ownerRepositoryPort.existsByUserId(userId)).thenReturn(false);
+        when(ownerRepositoryPort.existsByDocumentNumber("70514079")).thenReturn(false);
+        when(identityPort.validateDni("70514079")).thenReturn(new com.erp.tenant.domain.port.DniValidationResult(
+                "70514079", "ALDO JEANFRANCO", "MACHACCA", "SOTO", "MACHACCA SOTO, ALDO JEANFRANCO", true
+        ));
+        when(unitOfWork.callInTransaction(any())).thenAnswer(inv -> ((Supplier<?>) inv.getArgument(0)).get());
+        when(ownerRepositoryPort.save(any(OwnerProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OwnerProfileResult result = ownerService.create(command);
+
+        assertThat(result.firstName()).isEqualTo("ALDO JEANFRANCO");
+        assertThat(result.lastName()).isEqualTo("MACHACCA SOTO");
+    }
+
+    @Test
     @DisplayName("Should reject owner deletion if owner has associated workshops")
     void shouldRejectOwnerDeletionWithWorkshops() {
         UUID ownerId = UUID.randomUUID();

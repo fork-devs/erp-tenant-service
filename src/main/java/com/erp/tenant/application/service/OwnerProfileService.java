@@ -9,8 +9,11 @@ import com.erp.tenant.domain.exception.CannotDeleteOwnerWithWorkshopsException;
 import com.erp.tenant.domain.exception.DocumentAlreadyExistsException;
 import com.erp.tenant.domain.exception.OwnerAlreadyExistsException;
 import com.erp.tenant.domain.exception.OwnerNotFoundException;
+import com.erp.tenant.domain.exception.DocumentNotFoundException;
 import com.erp.tenant.domain.model.DocumentType;
 import com.erp.tenant.domain.model.OwnerProfile;
+import com.erp.tenant.domain.port.DniValidationResult;
+import com.erp.tenant.domain.port.IdentityValidationPort;
 import com.erp.tenant.domain.port.OwnerProfileRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
 import com.erp.tenant.domain.port.UnitOfWork;
@@ -23,13 +26,22 @@ public class OwnerProfileService implements ManageOwnerProfileUseCase, GetOwnerP
     private final OwnerProfileRepositoryPort ownerRepositoryPort;
     private final TenantRepositoryPort tenantRepositoryPort;
     private final UnitOfWork unitOfWork;
+    private final IdentityValidationPort identityValidationPort;
 
     public OwnerProfileService(OwnerProfileRepositoryPort ownerRepositoryPort,
                                TenantRepositoryPort tenantRepositoryPort,
                                UnitOfWork unitOfWork) {
+        this(ownerRepositoryPort, tenantRepositoryPort, unitOfWork, null);
+    }
+
+    public OwnerProfileService(OwnerProfileRepositoryPort ownerRepositoryPort,
+                               TenantRepositoryPort tenantRepositoryPort,
+                               UnitOfWork unitOfWork,
+                               IdentityValidationPort identityValidationPort) {
         this.ownerRepositoryPort = ownerRepositoryPort;
         this.tenantRepositoryPort = tenantRepositoryPort;
         this.unitOfWork = unitOfWork;
+        this.identityValidationPort = identityValidationPort;
     }
 
     @Override
@@ -50,11 +62,27 @@ public class OwnerProfileService implements ManageOwnerProfileUseCase, GetOwnerP
         }
 
         DocumentType docType = DocumentType.fromString(command.documentType());
+        String firstName = command.firstName();
+        String lastName = command.lastName();
+
+        if (identityValidationPort != null && docType == DocumentType.DNI) {
+            DniValidationResult dniResult = identityValidationPort.validateDni(command.documentNumber());
+            if (dniResult == null || !dniResult.valid()) {
+                throw new DocumentNotFoundException(command.documentNumber());
+            }
+            if (dniResult.firstName() != null && !dniResult.firstName().isBlank()) {
+                firstName = dniResult.firstName();
+            }
+            if (dniResult.paternalSurname() != null && !dniResult.paternalSurname().isBlank()) {
+                lastName = dniResult.paternalSurname() + (dniResult.maternalSurname() != null ? " " + dniResult.maternalSurname() : "");
+            }
+        }
+
         OwnerProfile owner = OwnerProfile.create(
                 tenantId,
                 command.userId(),
-                command.firstName(),
-                command.lastName(),
+                firstName,
+                lastName,
                 docType,
                 command.documentNumber(),
                 command.phone()

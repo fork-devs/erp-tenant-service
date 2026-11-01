@@ -3,17 +3,24 @@ package com.erp.tenant.support;
 import com.erp.tenant.application.dto.command.ProvisionTenantCommand;
 import com.erp.tenant.application.dto.result.TenantResult;
 import com.erp.tenant.application.service.TenantProvisioningService;
+import com.erp.tenant.domain.port.DniValidationResult;
+import com.erp.tenant.domain.port.IdentityValidationPort;
+import com.erp.tenant.domain.port.RucValidationResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -25,6 +32,17 @@ class CoreBranchesAndProfilesIntegrationTest extends AbstractPostgresIntegration
 
     @Autowired
     private TenantProvisioningService tenantProvisioningService;
+
+    @MockitoBean
+    private IdentityValidationPort identityValidationPort;
+
+    @BeforeEach
+    void setUpIdentityValidation() {
+        when(identityValidationPort.validateDni(anyString()))
+                .thenReturn(new DniValidationResult("45678901", "Raul", "Castro", "Perez", "Raul Castro Perez", true));
+        when(identityValidationPort.validateRuc(anyString()))
+                .thenReturn(new RucValidationResult("20601111101", "Taller Sede Test SAC", "Taller Test", "ACTIVO", "HABIDO", "Av. Test 123", true));
+    }
 
     @Test
     @DisplayName("Should test full lifecycle of branches and branch subscriptions")

@@ -163,6 +163,26 @@ public class GlobalRestExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 
+    @ExceptionHandler(com.erp.tenant.domain.exception.DocumentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDocumentNotFound(com.erp.tenant.domain.exception.DocumentNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setTitle("Documento no Verificado");
+        problem.setType(URI.create("https://errors.erp-automotive.pe/tenant/document-not-found"));
+        problem.setProperty("errorCode", ex.getErrorCode());
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problem);
+    }
+
+    @ExceptionHandler(com.erp.tenant.domain.exception.RucNotActiveException.class)
+    public ResponseEntity<ProblemDetail> handleRucNotActive(com.erp.tenant.domain.exception.RucNotActiveException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setTitle("RUC No Válido o Inactivo");
+        problem.setType(URI.create("https://errors.erp-automotive.pe/tenant/ruc-not-active"));
+        problem.setProperty("errorCode", ex.getErrorCode());
+        problem.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problem);
+    }
+
     @ExceptionHandler(TenantSuspendedException.class)
     public ResponseEntity<ProblemDetail> handleTenantSuspended(TenantSuspendedException ex) {
         String detail = getMessage("error.tenant.tenant-suspended.detail", ex.getMessage());

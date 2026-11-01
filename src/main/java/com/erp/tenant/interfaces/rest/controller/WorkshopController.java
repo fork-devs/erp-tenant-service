@@ -37,25 +37,47 @@ public class WorkshopController {
     private final ManageWorkshopUseCase manageWorkshopUseCase;
     private final ProvisionTenantUseCase provisionTenantUseCase;
     private final TenantRepositoryPort tenantRepositoryPort;
+    private final com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort;
 
     public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase) {
-        this(manageWorkshopUseCase, null, null);
+        this(manageWorkshopUseCase, null, null, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase,
                               @org.springframework.beans.factory.annotation.Autowired(required = false) ProvisionTenantUseCase provisionTenantUseCase,
-                              @org.springframework.beans.factory.annotation.Autowired(required = false) TenantRepositoryPort tenantRepositoryPort) {
+                              @org.springframework.beans.factory.annotation.Autowired(required = false) TenantRepositoryPort tenantRepositoryPort,
+                              @org.springframework.beans.factory.annotation.Autowired(required = false) com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort) {
         this.manageWorkshopUseCase = manageWorkshopUseCase;
         this.provisionTenantUseCase = provisionTenantUseCase;
         this.tenantRepositoryPort = tenantRepositoryPort;
+        this.identityValidationPort = identityValidationPort;
     }
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     @PreAuthorize("isAuthenticated() and (hasAnyRole('SUPERADMIN', 'ADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER') or @multiTenancySecurityService.isAuthorizedForOwnerProfile(#request.ownerId()))")
-    @Operation(summary = "Crear Taller", description = "Crea un nuevo taller automotriz asociado a un owner")
+    @Operation(summary = "Crear Taller", description = "Crea un nuevo taller automotriz asociado a un owner con validación estricta de SUNAT")
     public ResponseEntity<WorkshopResponse> createWorkshop(@Valid @RequestBody CreateWorkshopRequest request) {
+        String businessName = request.businessName();
+        String brandName = request.brandName();
+
+        if (identityValidationPort != null) {
+            com.erp.tenant.domain.port.RucValidationResult rucResult = identityValidationPort.validateRuc(request.taxId());
+            if (rucResult == null || !rucResult.valid()) {
+                throw new com.erp.tenant.domain.exception.RucNotActiveException(request.taxId());
+            }
+            if (!rucResult.isActiveAndHabido()) {
+                throw new com.erp.tenant.domain.exception.RucNotActiveException(request.taxId(), rucResult.status(), rucResult.condition());
+            }
+            if (rucResult.legalName() != null && !rucResult.legalName().isBlank()) {
+                businessName = rucResult.legalName();
+            }
+            if (rucResult.tradeName() != null && !rucResult.tradeName().isBlank() && (brandName == null || brandName.isBlank())) {
+                brandName = rucResult.tradeName();
+            }
+        }
+
         UUID workshopId = null;
         if (tenantRepositoryPort != null) {
             var existing = tenantRepositoryPort.findByRuc(Ruc.of(request.taxId()));
@@ -65,7 +87,7 @@ public class WorkshopController {
         }
         if (workshopId == null && provisionTenantUseCase != null) {
             var res = provisionTenantUseCase.provisionTenant(new ProvisionTenantCommand(
-                    request.brandName(), request.taxId(), "ENTERPRISE", null, "#000000"
+                    brandName, request.taxId(), "ENTERPRISE", null, "#000000"
             ));
             workshopId = res.id();
         }
@@ -83,8 +105,8 @@ public class WorkshopController {
         return ResponseEntity.status(HttpStatus.CREATED).body(new WorkshopResponse(
                 workshopId,
                 request.ownerId(),
-                request.businessName(),
-                request.brandName(),
+                businessName,
+                brandName,
                 request.taxId(),
                 request.mileageIntervalConfig() != null ? request.mileageIntervalConfig() : 5000
         ));

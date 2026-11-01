@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.erp.tenant.domain.port.TenantRepositoryPort;
+import com.erp.tenant.domain.valueobject.Ruc;
+import com.erp.tenant.domain.valueobject.TenantId;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,16 +36,19 @@ public class WorkshopController {
 
     private final ManageWorkshopUseCase manageWorkshopUseCase;
     private final ProvisionTenantUseCase provisionTenantUseCase;
+    private final TenantRepositoryPort tenantRepositoryPort;
 
     public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase) {
-        this(manageWorkshopUseCase, null);
+        this(manageWorkshopUseCase, null, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public WorkshopController(ManageWorkshopUseCase manageWorkshopUseCase,
-                              @org.springframework.beans.factory.annotation.Autowired(required = false) ProvisionTenantUseCase provisionTenantUseCase) {
+                              @org.springframework.beans.factory.annotation.Autowired(required = false) ProvisionTenantUseCase provisionTenantUseCase,
+                              @org.springframework.beans.factory.annotation.Autowired(required = false) TenantRepositoryPort tenantRepositoryPort) {
         this.manageWorkshopUseCase = manageWorkshopUseCase;
         this.provisionTenantUseCase = provisionTenantUseCase;
+        this.tenantRepositoryPort = tenantRepositoryPort;
     }
 
     @PostMapping
@@ -53,10 +59,25 @@ public class WorkshopController {
         if (provisionTenantUseCase != null) {
             try {
                 var res = provisionTenantUseCase.provisionTenant(new ProvisionTenantCommand(
-                        request.brandName(), request.taxId(), "ENTERPRISE", UUID.randomUUID(), "#000000"
+                        request.brandName(), request.taxId(), "ENTERPRISE", null, "#000000"
                 ));
                 workshopId = res.id();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                if (tenantRepositoryPort != null) {
+                    var existing = tenantRepositoryPort.findByRuc(Ruc.of(request.taxId()));
+                    if (existing.isPresent()) {
+                        workshopId = existing.get().getId().getValue();
+                    }
+                }
+            }
+        }
+        if (tenantRepositoryPort != null && workshopId != null) {
+            var tenantOpt = tenantRepositoryPort.findById(new TenantId(workshopId));
+            if (tenantOpt.isPresent()) {
+                var tenant = tenantOpt.get();
+                tenant.setOwnerId(request.ownerId());
+                tenantRepositoryPort.save(tenant);
+            }
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(new WorkshopResponse(
                 workshopId,

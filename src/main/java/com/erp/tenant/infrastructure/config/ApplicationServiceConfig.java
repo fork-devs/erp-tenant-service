@@ -105,8 +105,9 @@ public class ApplicationServiceConfig {
     public OwnerProfileService ownerProfileService(
             OwnerProfileRepositoryPort ownerRepositoryPort,
             TenantRepositoryPort tenantRepositoryPort,
-            UnitOfWork unitOfWork) {
-        return new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork);
+            UnitOfWork unitOfWork,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort) {
+        return new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork, identityValidationPort);
     }
 
     @Bean

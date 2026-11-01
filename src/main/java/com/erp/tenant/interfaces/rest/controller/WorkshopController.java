@@ -56,23 +56,23 @@ public class WorkshopController {
     @PreAuthorize("isAuthenticated() and (hasAnyRole('SUPERADMIN', 'ADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER') or @multiTenancySecurityService.isAuthorizedForOwnerProfile(#request.ownerId()))")
     @Operation(summary = "Crear Taller", description = "Crea un nuevo taller automotriz asociado a un owner")
     public ResponseEntity<WorkshopResponse> createWorkshop(@Valid @RequestBody CreateWorkshopRequest request) {
-        UUID workshopId = UUID.randomUUID();
-        if (provisionTenantUseCase != null) {
-            try {
-                var res = provisionTenantUseCase.provisionTenant(new ProvisionTenantCommand(
-                        request.brandName(), request.taxId(), "ENTERPRISE", null, "#000000"
-                ));
-                workshopId = res.id();
-            } catch (Exception e) {
-                if (tenantRepositoryPort != null) {
-                    var existing = tenantRepositoryPort.findByRuc(Ruc.of(request.taxId()));
-                    if (existing.isPresent()) {
-                        workshopId = existing.get().getId().getValue();
-                    }
-                }
+        UUID workshopId = null;
+        if (tenantRepositoryPort != null) {
+            var existing = tenantRepositoryPort.findByRuc(Ruc.of(request.taxId()));
+            if (existing.isPresent()) {
+                workshopId = existing.get().getId().getValue();
             }
         }
-        if (tenantRepositoryPort != null && workshopId != null) {
+        if (workshopId == null && provisionTenantUseCase != null) {
+            var res = provisionTenantUseCase.provisionTenant(new ProvisionTenantCommand(
+                    request.brandName(), request.taxId(), "ENTERPRISE", null, "#000000"
+            ));
+            workshopId = res.id();
+        }
+        if (workshopId == null) {
+            workshopId = UUID.randomUUID();
+        }
+        if (tenantRepositoryPort != null) {
             var tenantOpt = tenantRepositoryPort.findById(new TenantId(workshopId));
             if (tenantOpt.isPresent()) {
                 var tenant = tenantOpt.get();

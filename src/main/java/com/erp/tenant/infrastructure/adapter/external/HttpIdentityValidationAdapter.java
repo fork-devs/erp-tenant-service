@@ -31,6 +31,7 @@ public class HttpIdentityValidationAdapter implements IdentityValidationPort {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public HttpIdentityValidationAdapter(
             @Value("${erp.integration-hub.base-url:http://localhost:8085}") String baseUrl,
             @Value("${erp.security.internal-service-key:erp_internal_secret_service_key_2026}") String internalServiceKey) {

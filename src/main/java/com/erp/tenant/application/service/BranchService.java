@@ -50,10 +50,7 @@ public class BranchService implements ManageBranchUseCase, GetBranchesUseCase, M
             throw new BranchCodeAlreadyExistsException(command.workshopId(), normalizedCode);
         }
 
-        UUID tenantId = TenantContextHolder.getTenantId();
-        if (tenantId == null) {
-            tenantId = command.workshopId();
-        }
+        UUID tenantId = command.workshopId();
 
         Branch branch = Branch.create(
                 tenantId,

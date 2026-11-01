@@ -97,8 +97,9 @@ public class ApplicationServiceConfig {
     @Bean
     public EmployeeProfileService employeeProfileService(
             EmployeeProfileRepositoryPort employeeRepositoryPort,
-            UnitOfWork unitOfWork) {
-        return new EmployeeProfileService(employeeRepositoryPort, unitOfWork);
+            UnitOfWork unitOfWork,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort) {
+        return new EmployeeProfileService(employeeRepositoryPort, unitOfWork, identityValidationPort);
     }
 
     @Bean

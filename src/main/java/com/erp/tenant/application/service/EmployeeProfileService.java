@@ -6,10 +6,13 @@ import com.erp.tenant.application.dto.result.EmployeeProfileResult;
 import com.erp.tenant.application.usecase.GetEmployeeProfilesUseCase;
 import com.erp.tenant.application.usecase.ManageEmployeeProfileUseCase;
 import com.erp.tenant.domain.exception.DocumentAlreadyExistsException;
+import com.erp.tenant.domain.exception.DocumentNotFoundException;
 import com.erp.tenant.domain.exception.EmployeeNotFoundException;
 import com.erp.tenant.domain.model.DocumentType;
 import com.erp.tenant.domain.model.EmployeeProfile;
+import com.erp.tenant.domain.port.DniValidationResult;
 import com.erp.tenant.domain.port.EmployeeProfileRepositoryPort;
+import com.erp.tenant.domain.port.IdentityValidationPort;
 import com.erp.tenant.domain.port.UnitOfWork;
 import com.erp.tenant.infrastructure.security.TenantContextHolder;
 
@@ -19,11 +22,19 @@ public class EmployeeProfileService implements ManageEmployeeProfileUseCase, Get
 
     private final EmployeeProfileRepositoryPort employeeRepositoryPort;
     private final UnitOfWork unitOfWork;
+    private final IdentityValidationPort identityValidationPort;
 
     public EmployeeProfileService(EmployeeProfileRepositoryPort employeeRepositoryPort,
                                   UnitOfWork unitOfWork) {
+        this(employeeRepositoryPort, unitOfWork, null);
+    }
+
+    public EmployeeProfileService(EmployeeProfileRepositoryPort employeeRepositoryPort,
+                                  UnitOfWork unitOfWork,
+                                  IdentityValidationPort identityValidationPort) {
         this.employeeRepositoryPort = employeeRepositoryPort;
         this.unitOfWork = unitOfWork;
+        this.identityValidationPort = identityValidationPort;
     }
 
     @Override
@@ -41,11 +52,27 @@ public class EmployeeProfileService implements ManageEmployeeProfileUseCase, Get
         }
 
         DocumentType docType = DocumentType.fromString(command.documentType());
+        String firstName = command.firstName();
+        String lastName = command.lastName();
+
+        if (identityValidationPort != null && docType == DocumentType.DNI) {
+            DniValidationResult dniResult = identityValidationPort.validateDni(command.documentNumber());
+            if (dniResult == null || !dniResult.valid()) {
+                throw new DocumentNotFoundException(command.documentNumber());
+            }
+            if (dniResult.firstName() != null && !dniResult.firstName().isBlank()) {
+                firstName = dniResult.firstName();
+            }
+            if (dniResult.paternalSurname() != null && !dniResult.paternalSurname().isBlank()) {
+                lastName = dniResult.paternalSurname() + (dniResult.maternalSurname() != null ? " " + dniResult.maternalSurname() : "");
+            }
+        }
+
         EmployeeProfile employee = EmployeeProfile.create(
                 tenantId,
                 command.userId(),
-                command.firstName(),
-                command.lastName(),
+                firstName,
+                lastName,
                 docType,
                 command.documentNumber(),
                 command.phone()

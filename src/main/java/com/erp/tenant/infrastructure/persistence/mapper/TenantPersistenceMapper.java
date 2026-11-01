@@ -20,6 +20,8 @@ public final class TenantPersistenceMapper {
                 entity.getPlanId(),
                 TenantStatus.fromString(entity.getStatus()),
                 BrandColor.of(entity.getBrandColor()),
+                entity.getOwnerId(),
+                entity.getMileageIntervalConfig(),
                 entity.getCreatedAt()
         );
     }
@@ -33,6 +35,8 @@ public final class TenantPersistenceMapper {
                 domain.getPlanId(),
                 domain.getStatus().name(),
                 domain.getBrandColor().getValue(),
+                domain.getOwnerId(),
+                domain.getMileageIntervalConfig(),
                 domain.getCreatedAt()
         );
     }

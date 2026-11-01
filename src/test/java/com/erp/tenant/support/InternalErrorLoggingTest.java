@@ -20,11 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Un error interno queda registrado, y no expone su contenido al cliente.
- *
- * <p>El manejador global registra la excepcion con su traza, y devuelve una
- * respuesta generica. El diagnostico va al registro, que es del operador; al
- * cliente le llega un error que no dice nada del interior del servicio.
+ * Verifies internal error logging: server errors are logged with full trace without leaking internals to clients.
  */
 class InternalErrorLoggingTest extends AbstractPostgresIntegrationTest {
 
@@ -54,9 +50,9 @@ class InternalErrorLoggingTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    @DisplayName("El error interno se registra y la respuesta al cliente es generica")
-    void elErrorInternoSeRegistraYLaRespuestaEsGenerica() throws Exception {
-        // Un servicio que falla produce un error interno.
+    @DisplayName("Internal error is logged and response to client is generic")
+    void internalErrorIsLoggedAndResponseIsGeneric() throws Exception {
+        // Simulates an internal failure in application service.
         mockMvc.perform(post("/api/v1/tenants")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"commercialName\":\"Taller\",\"ruc\":\"20601234567\","

@@ -8,13 +8,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Arranca una instancia real de PostgreSQL en proceso, para los tests que
- * necesitan verificar el comportamiento de la base de datos y no su
- * simulacion: Row-Level Security, restricciones NOT NULL y migraciones.
- *
- * <p>El entorno de ejecucion no dispone de Docker, de modo que Testcontainers
- * no es viable. {@code embedded-postgres} descarga y arranca una distribucion
- * real de PostgreSQL como proceso nativo.
+ * Starts an in-process native PostgreSQL instance for integration tests
+ * that verify database behavior (Row-Level Security, constraints, Flyway migrations).
  */
 public final class EmbeddedPostgresSupport {
 
@@ -49,10 +44,9 @@ public final class EmbeddedPostgresSupport {
                  Statement statement = connection.createStatement()) {
                 statement.execute("ALTER ROLE \"" + ownerUser + "\" WITH PASSWORD '" + OWNER_PASSWORD + "'");
             }
-            // El rol de ejecucion lo crea la migracion V4, que es la que
-            // concede los permisos sobre las tablas que crea.
+            // The runtime execution role is created by migration V4 with necessary grants.
         } catch (IOException | SQLException e) {
-            throw new IllegalStateException("No se pudo arrancar PostgreSQL embebido para los tests", e);
+            throw new IllegalStateException("Failed to start embedded PostgreSQL for integration tests", e);
         }
     }
 

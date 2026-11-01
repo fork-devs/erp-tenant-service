@@ -5,6 +5,6 @@ import jakarta.validation.constraints.Pattern;
 public record UpdateBrandingRequest(
         String commercialName,
 
-        @Pattern(regexp = "^#([A-Fa-f0-9]{6})$", message = "El color de marca debe ser un código hexadecimal válido (ej. #1E40AF)")
+        @Pattern(regexp = "^#([A-Fa-f0-9]{6})$", message = "{validation.tenant.branding.brand-color.pattern}")
         String brandColor
 ) {}

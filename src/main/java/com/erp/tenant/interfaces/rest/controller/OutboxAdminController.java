@@ -20,11 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Administracion de la cola de mensajes agotados de la bandeja de salida.
- *
- * <p>Un mensaje agotado ya no se reintenta solo, pero se conserva: es la
- * evidencia de un evento que el sistema afirma haber producido y que nunca
- * llego al bus. Se puede reactivar para que vuelva a intentarse.
+ * Administrative controller for inspecting and reactivating Dead Letter Queue (DLQ) outbox messages.
  */
 @RestController
 @RequestMapping("/api/v1/admin/outbox")
@@ -43,7 +39,7 @@ public class OutboxAdminController {
     }
 
     @GetMapping("/dead-letters")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Consultar la cola de mensajes agotados",
             description = "Devuelve los mensajes de la bandeja de salida que agotaron sus intentos, con su ultimo error y su numero de intentos")
     public ResponseEntity<List<OutboxDeadLetterResponse>> listDeadLetters(
@@ -57,7 +53,7 @@ public class OutboxAdminController {
     }
 
     @PostMapping("/dead-letters/{id}/reactivate")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Reactivar un mensaje agotado",
             description = "Devuelve el mensaje a la cola de pendientes con el contador de intentos restablecido")
     public ResponseEntity<OutboxDeadLetterResponse> reactivate(@PathVariable UUID id) {

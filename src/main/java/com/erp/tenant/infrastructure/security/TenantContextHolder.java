@@ -3,13 +3,7 @@ package com.erp.tenant.infrastructure.security;
 import java.util.UUID;
 
 /**
- * Contexto de taller de la peticion en curso.
- *
- * <p>Se establece exclusivamente desde un token verificado y se limpia al
- * terminar la peticion. No existe ningun mecanismo para eludirlo: el
- * aislamiento depende de que el tenant sea el del token.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * Thread-local context holder for the active tenant during request execution.
  */
 public final class TenantContextHolder {
 

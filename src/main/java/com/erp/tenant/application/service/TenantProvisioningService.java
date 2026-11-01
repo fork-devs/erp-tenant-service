@@ -11,10 +11,12 @@ import com.erp.tenant.domain.model.Plan;
 import com.erp.tenant.domain.model.PlanCode;
 import com.erp.tenant.domain.model.Tenant;
 import com.erp.tenant.domain.model.TenantOutboxMessage;
+import com.erp.tenant.domain.model.WorkshopSpecialty;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
 import com.erp.tenant.domain.port.UnitOfWork;
+import com.erp.tenant.domain.port.WorkshopSpecialtyRepositoryPort;
 import com.erp.tenant.infrastructure.messaging.DomainEventSerializer;
 import com.erp.tenant.domain.valueobject.BrandColor;
 import com.erp.tenant.domain.valueobject.Ruc;
@@ -28,6 +30,22 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
     private final TenantOutboxRepositoryPort outboxRepositoryPort;
     private final UnitOfWork unitOfWork;
     private final DomainEventSerializer eventSerializer;
+    private final WorkshopSpecialtyRepositoryPort specialtyRepositoryPort;
+
+    public TenantProvisioningService(
+            TenantRepositoryPort tenantRepositoryPort,
+            PlanRepositoryPort planRepositoryPort,
+            TenantOutboxRepositoryPort outboxRepositoryPort,
+            UnitOfWork unitOfWork,
+            DomainEventSerializer eventSerializer,
+            WorkshopSpecialtyRepositoryPort specialtyRepositoryPort) {
+        this.tenantRepositoryPort = tenantRepositoryPort;
+        this.planRepositoryPort = planRepositoryPort;
+        this.outboxRepositoryPort = outboxRepositoryPort;
+        this.unitOfWork = unitOfWork;
+        this.eventSerializer = eventSerializer;
+        this.specialtyRepositoryPort = specialtyRepositoryPort;
+    }
 
     public TenantProvisioningService(
             TenantRepositoryPort tenantRepositoryPort,
@@ -35,11 +53,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
             TenantOutboxRepositoryPort outboxRepositoryPort,
             UnitOfWork unitOfWork,
             DomainEventSerializer eventSerializer) {
-        this.tenantRepositoryPort = tenantRepositoryPort;
-        this.planRepositoryPort = planRepositoryPort;
-        this.outboxRepositoryPort = outboxRepositoryPort;
-        this.unitOfWork = unitOfWork;
-        this.eventSerializer = eventSerializer;
+        this(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort, unitOfWork, eventSerializer, null);
     }
 
     @Override
@@ -53,26 +67,38 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
 
         Ruc ruc = Ruc.of(command.ruc());
 
-        // El taller y el evento de dominio se confirman juntos: si la
-        // escritura del evento falla, el taller tampoco se crea. Sin este
-        // limite, cada llamada a un repositorio abria su propia transaccion y
-        // un fallo intermedio dejaba un taller sin su evento, que es un
-        // estado que nadie puede recuperar.
+        // Workshop creation and domain event persist atomically in the transactional outbox:
+        // failure to enqueue the event rolls back tenant creation entirely.
         return unitOfWork.callInTransaction(() -> {
             if (tenantRepositoryPort.existsByRuc(ruc)) {
                 throw new RucAlreadyExistsException(ruc.getValue());
             }
 
-            // Resolver Plan
+            // Resolve Plan
             Plan plan = resolvePlan(command);
 
             BrandColor brandColor = BrandColor.of(command.brandColor());
             Tenant tenant = Tenant.create(command.commercialName(), ruc, plan.getId(), brandColor);
 
-            // 1. Guardar Tenant en PostgreSQL
+            // 1. Persist Tenant aggregate root
             Tenant savedTenant = tenantRepositoryPort.save(tenant);
 
-            // 2. Crear Evento de Dominio TenantProvisioned
+            // 2. Automatically seed base specialties for the new workshop
+            if (specialtyRepositoryPort != null) {
+                for (WorkshopSpecialtyService.BaseSpecialtyDefinition def : WorkshopSpecialtyService.BASE_SPECIALTIES) {
+                    if (!specialtyRepositoryPort.existsByCode(savedTenant.getId().getValue(), savedTenant.getId().getValue(), def.code())) {
+                        specialtyRepositoryPort.save(WorkshopSpecialty.create(
+                                savedTenant.getId().getValue(),
+                                savedTenant.getId().getValue(),
+                                def.name(),
+                                def.code(),
+                                def.description()
+                        ));
+                    }
+                }
+            }
+
+            // 3. Create TenantProvisioned domain event
             TenantProvisionedEvent event = new TenantProvisionedEvent(
                     savedTenant.getId().getValue(),
                     savedTenant.getCommercialName(),
@@ -85,7 +111,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
 
             String payloadJson = eventSerializer.serialize(event);
 
-            // 3. Guardar en la Transactional Outbox, en la MISMA transaccion
+            // 3. Persist to Transactional Outbox within the same transaction
             TenantOutboxMessage outboxMessage = TenantOutboxMessage.of(
                     savedTenant.getId().getValue(),
                     savedTenant.getId().getValue(),
@@ -121,7 +147,7 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
             return planRepositoryPort.findByCode(planCode)
                     .orElseThrow(() -> new PlanNotFoundException(planCode.name()));
         }
-        // Plan por defecto
+        // Default subscription plan
         return planRepositoryPort.findByCode(PlanCode.BASICO)
                 .orElseThrow(() -> new PlanNotFoundException("BASICO"));
     }

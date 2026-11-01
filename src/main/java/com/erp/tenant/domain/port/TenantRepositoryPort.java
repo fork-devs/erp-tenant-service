@@ -13,4 +13,6 @@ public interface TenantRepositoryPort {
     Optional<Tenant> findByRuc(Ruc ruc);
     boolean existsByRuc(Ruc ruc);
     List<Tenant> findAll();
+    List<Tenant> findByOwnerId(java.util.UUID ownerId);
+    boolean existsByOwnerId(java.util.UUID ownerId);
 }

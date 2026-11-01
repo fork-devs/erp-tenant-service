@@ -17,6 +17,8 @@ public class Tenant implements Serializable {
     private UUID planId;
     private TenantStatus status;
     private BrandColor brandColor;
+    private UUID ownerId;
+    private Integer mileageIntervalConfig;
     private final Instant createdAt;
 
     public Tenant(TenantId id,
@@ -25,6 +27,18 @@ public class Tenant implements Serializable {
                   UUID planId,
                   TenantStatus status,
                   BrandColor brandColor,
+                  Instant createdAt) {
+        this(id, commercialName, ruc, planId, status, brandColor, null, 5000, createdAt);
+    }
+
+    public Tenant(TenantId id,
+                  String commercialName,
+                  Ruc ruc,
+                  UUID planId,
+                  TenantStatus status,
+                  BrandColor brandColor,
+                  UUID ownerId,
+                  Integer mileageIntervalConfig,
                   Instant createdAt) {
         if (id == null || commercialName == null || ruc == null || planId == null) {
             throw new IllegalArgumentException("Campos obligatorios del Tenant no pueden ser nulos");
@@ -38,6 +52,8 @@ public class Tenant implements Serializable {
         this.planId = planId;
         this.status = status != null ? status : TenantStatus.ACTIVE;
         this.brandColor = brandColor != null ? brandColor : BrandColor.defaultColor();
+        this.ownerId = ownerId;
+        this.mileageIntervalConfig = mileageIntervalConfig != null ? mileageIntervalConfig : 5000;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
@@ -102,6 +118,31 @@ public class Tenant implements Serializable {
 
     public TenantStatus getStatus() {
         return status;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public Integer getMileageIntervalConfig() {
+        return mileageIntervalConfig;
+    }
+
+    public void setMileageIntervalConfig(Integer mileageIntervalConfig) {
+        this.mileageIntervalConfig = mileageIntervalConfig != null ? mileageIntervalConfig : 5000;
+    }
+
+    public void updateWorkshop(String commercialName, Integer mileageIntervalConfig) {
+        if (commercialName != null && !commercialName.trim().isEmpty()) {
+            this.commercialName = commercialName.trim();
+        }
+        if (mileageIntervalConfig != null) {
+            this.mileageIntervalConfig = mileageIntervalConfig;
+        }
     }
 
     public BrandColor getBrandColor() {

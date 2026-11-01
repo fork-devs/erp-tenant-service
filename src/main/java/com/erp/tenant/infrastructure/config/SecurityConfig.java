@@ -18,14 +18,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Seguridad perimetral del servicio de tenants.
+ * Perimeter security configuration for tenant-service.
  *
- * <p>Los endpoints de negocio NO son publicos: exigen un token de acceso
- * verificado, del que se deriva el taller. Antes el comodin
- * {@code /api/v1/**} estaba en permitAll, con lo que cualquiera podia crear,
- * suspender, re-planificar o leer cualquier taller sin autenticarse.
- *
- * <p>Ver docs/doc-estado-implementacion.md, hallazgo P0 5.4.
+ * <p>Enforces authenticated JWT bearer validation on business endpoints and strict role checks.
  */
 @Configuration
 @EnableWebSecurity
@@ -37,7 +32,7 @@ public class SecurityConfig {
                                                    JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -47,7 +42,7 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
-                        .requestMatchers("/api/v1/internal/**").hasAnyRole("ADMIN_TALLER", "SUPERADMIN", "INTERNAL_SERVICE")
+                        .requestMatchers("/api/v1/internal/**").hasAnyRole("WORKSHOP_ADMIN", "ADMIN_TALLER", "SUPERADMIN", "INTERNAL_SERVICE")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().authenticated()
                 )

@@ -20,13 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
 /**
- * El taller y su evento de dominio se confirman juntos.
- *
- * <p>Con el limite transaccional en la capa de aplicacion, un fallo al
- * escribir el evento revierte tambien la escritura del taller. Sin el, cada
- * llamada a un repositorio abria su propia transaccion y un fallo intermedio
- * dejaba un taller sin su evento: un estado que nadie puede recuperar y que
- * el sistema afirma haber producido.
+ * Verifies transactional atomicity during tenant provisioning: event persistence failure rolls back tenant creation.
  */
 class TenantProvisioningAtomicityTest extends AbstractPostgresIntegrationTest {
 
@@ -43,46 +37,40 @@ class TenantProvisioningAtomicityTest extends AbstractPostgresIntegrationTest {
     private UnitOfWork unitOfWork;
 
     @Test
-    void siFallaLaEscrituraDelEventoNoQuedaNingunTallerCreado() {
-        int talleresAntes = tenantRepositoryPort.findAll().size();
+    void ifEventPersistenceFailsNoTenantIsCreated() {
+        int tenantsBefore = tenantRepositoryPort.findAll().size();
 
-        doThrow(new RuntimeException("el evento no se puede escribir"))
+        doThrow(new RuntimeException("Outbox event write simulated failure"))
                 .when(outboxRepositoryPort).save(any());
 
         assertThrows(RuntimeException.class, () -> tenantProvisioningService.provisionTenant(
                 new ProvisionTenantCommand("Taller Atomico", "20609999999", "BASICO", null, "#1A2B3C")));
 
-        // El taller NO debe existir: la escritura del evento fallo y la
-        // transaccion se revirtio por completo. El conteo es relativo, y no
-        // absoluto, porque la base de datos es compartida entre tests.
-        assertEquals(talleresAntes, tenantRepositoryPort.findAll().size(),
-                "No debe quedar ningun taller creado cuando falla la escritura de su evento");
+        // Tenant must NOT exist: outbox failure rolled back entire transaction.
+        assertEquals(tenantsBefore, tenantRepositoryPort.findAll().size(),
+                "No tenant must remain created when its domain event persistence fails");
     }
 
     /**
-     * RUC de 11 digitos, unico por test: el RUC es unico en la base de
-     * datos, que es compartida entre tests.
+     * Generates unique 11-digit RUC number per test to avoid unique constraint collisions.
      */
-    private String rucUnico() {
+    private String uniqueRuc() {
         return "2060" + String.format("%07d", Math.abs(UUID.randomUUID().hashCode() % 10_000_000));
     }
 
     @Test
-    void siTodoVaBienElTallerYSuEventoQuedanConfirmados() {
-        // Cada test usa un RUC propio: el RUC es unico, y la base de datos es
-        // compartida entre tests.
+    void whenProvisioningSucceedsTenantAndEventAreCommittedTogether() {
+        // Unique RUC per test execution.
         TenantResult result = tenantProvisioningService.provisionTenant(
-                new ProvisionTenantCommand("Taller Correcto", rucUnico(), "BASICO", null, "#1A2B3C"));
+                new ProvisionTenantCommand("Taller Correcto", uniqueRuc(), "BASICO", null, "#1A2B3C"));
 
-        // Los conteos son relativos: la base de datos es compartida entre
-        // tests, de modo que el conteo absoluto dependeria del orden de
-        // ejecucion.
-        List<TenantOutboxMessage> pendientes = unitOfWork.callInTransaction(
+        // Relative counts ensure independence from test execution order.
+        List<TenantOutboxMessage> pending = unitOfWork.callInTransaction(
                 () -> outboxRepositoryPort.findPending(java.time.Instant.now().plusSeconds(60), 200));
 
-        assertEquals(1, pendientes.stream()
+        assertEquals(1, pending.stream()
                         .filter(m -> m.getTenantId().equals(result.id()))
                         .count(),
-                "El evento del taller debe quedar pendiente de publicar");
+                "Tenant domain event must remain pending for publication in the outbox");
     }
 }

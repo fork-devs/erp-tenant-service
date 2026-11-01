@@ -5,8 +5,7 @@ import com.erp.tenant.domain.model.TenantOutboxMessage;
 import java.util.UUID;
 
 /**
- * Devuelve un mensaje agotado a la cola de pendientes, con el contador de
- * intentos restablecido, para que vuelva a intentarse.
+ * Use case for reactivating an exhausted DLQ outbox message back to pending status.
  */
 public interface ReactivateDeadLetteredMessageUseCase {
 

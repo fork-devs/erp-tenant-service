@@ -30,18 +30,30 @@ public class TenantJpaEntity {
     @Column(name = "brand_color", length = 10)
     private String brandColor;
 
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
+    @Column(name = "mileage_interval_config")
+    private Integer mileageIntervalConfig;
+
     @Column(name = "created_at")
     private Instant createdAt;
 
     public TenantJpaEntity() {}
 
     public TenantJpaEntity(UUID id, String commercialName, String ruc, UUID planId, String status, String brandColor, Instant createdAt) {
+        this(id, commercialName, ruc, planId, status, brandColor, null, 5000, createdAt);
+    }
+
+    public TenantJpaEntity(UUID id, String commercialName, String ruc, UUID planId, String status, String brandColor, UUID ownerId, Integer mileageIntervalConfig, Instant createdAt) {
         this.id = id;
         this.commercialName = commercialName;
         this.ruc = ruc;
         this.planId = planId;
         this.status = status;
         this.brandColor = brandColor;
+        this.ownerId = ownerId;
+        this.mileageIntervalConfig = mileageIntervalConfig != null ? mileageIntervalConfig : 5000;
         this.createdAt = createdAt;
     }
 
@@ -91,6 +103,22 @@ public class TenantJpaEntity {
 
     public void setBrandColor(String brandColor) {
         this.brandColor = brandColor;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public Integer getMileageIntervalConfig() {
+        return mileageIntervalConfig;
+    }
+
+    public void setMileageIntervalConfig(Integer mileageIntervalConfig) {
+        this.mileageIntervalConfig = mileageIntervalConfig;
     }
 
     public Instant getCreatedAt() {

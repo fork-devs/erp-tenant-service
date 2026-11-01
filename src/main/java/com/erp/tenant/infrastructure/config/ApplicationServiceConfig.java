@@ -1,15 +1,27 @@
 package com.erp.tenant.infrastructure.config;
 
+import com.erp.tenant.application.service.BranchService;
+import com.erp.tenant.application.service.EmployeeProfileService;
 import com.erp.tenant.application.service.OutboxDeadLetterService;
 import com.erp.tenant.application.service.OutboxProcessorService;
+import com.erp.tenant.application.service.OwnerProfileService;
 import com.erp.tenant.application.service.PlanQueryService;
+import com.erp.tenant.application.service.ProfileService;
 import com.erp.tenant.application.service.TenantManagementService;
 import com.erp.tenant.application.service.TenantProvisioningService;
+import com.erp.tenant.application.service.WorkshopService;
+import com.erp.tenant.application.service.WorkshopSpecialtyService;
+import com.erp.tenant.domain.port.BranchRepositoryPort;
+import com.erp.tenant.domain.port.BranchSubscriptionRepositoryPort;
+import com.erp.tenant.domain.port.EmployeeProfileRepositoryPort;
 import com.erp.tenant.domain.port.EventPublisherPort;
+import com.erp.tenant.domain.port.OwnerProfileRepositoryPort;
 import com.erp.tenant.domain.port.PlanRepositoryPort;
 import com.erp.tenant.domain.port.TenantOutboxRepositoryPort;
 import com.erp.tenant.domain.port.TenantRepositoryPort;
 import com.erp.tenant.domain.port.UnitOfWork;
+import com.erp.tenant.domain.port.WorkshopSpecialtyRepositoryPort;
+import com.erp.tenant.domain.port.WorkshopSpecialtyRevisionRepositoryPort;
 import com.erp.tenant.infrastructure.messaging.DomainEventSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -26,9 +38,18 @@ public class ApplicationServiceConfig {
             PlanRepositoryPort planRepositoryPort,
             TenantOutboxRepositoryPort outboxRepositoryPort,
             UnitOfWork unitOfWork,
-            DomainEventSerializer eventSerializer) {
+            DomainEventSerializer eventSerializer,
+            WorkshopSpecialtyRepositoryPort specialtyRepositoryPort) {
         return new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
-                unitOfWork, eventSerializer);
+                unitOfWork, eventSerializer, specialtyRepositoryPort);
+    }
+
+    @Bean
+    public WorkshopSpecialtyService workshopSpecialtyService(
+            WorkshopSpecialtyRepositoryPort specialtyRepositoryPort,
+            WorkshopSpecialtyRevisionRepositoryPort revisionRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new WorkshopSpecialtyService(specialtyRepositoryPort, revisionRepositoryPort, unitOfWork);
     }
 
     @Bean
@@ -62,5 +83,45 @@ public class ApplicationServiceConfig {
             TenantOutboxRepositoryPort outboxRepositoryPort,
             UnitOfWork unitOfWork) {
         return new OutboxDeadLetterService(outboxRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public BranchService branchService(
+            BranchRepositoryPort branchRepositoryPort,
+            BranchSubscriptionRepositoryPort subscriptionRepositoryPort,
+            PlanRepositoryPort planRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new BranchService(branchRepositoryPort, subscriptionRepositoryPort, planRepositoryPort, unitOfWork);
+    }
+
+    @Bean
+    public EmployeeProfileService employeeProfileService(
+            EmployeeProfileRepositoryPort employeeRepositoryPort,
+            UnitOfWork unitOfWork,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort) {
+        return new EmployeeProfileService(employeeRepositoryPort, unitOfWork, identityValidationPort);
+    }
+
+    @Bean
+    public OwnerProfileService ownerProfileService(
+            OwnerProfileRepositoryPort ownerRepositoryPort,
+            TenantRepositoryPort tenantRepositoryPort,
+            UnitOfWork unitOfWork,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.erp.tenant.domain.port.IdentityValidationPort identityValidationPort) {
+        return new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork, identityValidationPort);
+    }
+
+    @Bean
+    public ProfileService profileService(
+            OwnerProfileRepositoryPort ownerRepositoryPort,
+            EmployeeProfileRepositoryPort employeeRepositoryPort) {
+        return new ProfileService(ownerRepositoryPort, employeeRepositoryPort);
+    }
+
+    @Bean
+    public WorkshopService workshopService(
+            TenantRepositoryPort tenantRepositoryPort,
+            UnitOfWork unitOfWork) {
+        return new WorkshopService(tenantRepositoryPort, unitOfWork);
     }
 }

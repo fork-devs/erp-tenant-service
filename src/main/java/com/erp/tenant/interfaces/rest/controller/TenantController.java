@@ -39,11 +39,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Endpoints de gestion de talleres.
+ * REST controller for workshop tenant lifecycle management.
  *
- * <p>Cada operacion comprueba que el taller solicitado sea el del principal
- * autenticado. La excepcion es el superadministrador de la plataforma, que
- * opera con alcance transversal.
+ * <p>Enforces tenant isolation ensuring tenants cannot operate on or query other workshops
+ * unless authorized with SUPERADMIN platform scope.
  */
 @RestController
 @RequestMapping("/api/v1/tenants")
@@ -99,7 +98,7 @@ public class TenantController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER', 'ASESOR', 'MECANICO')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER', 'SERVICE_ADVISOR', 'ASESOR', 'TECHNICIAN', 'MECANICO')")
     @Operation(summary = "Obtener detalles de un taller por su ID")
     public ResponseEntity<TenantResponse> getTenantById(@PathVariable UUID id, Authentication authentication) {
         verificarAcceso(id, authentication);
@@ -123,7 +122,7 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Suspender o reactivar un taller")
     public ResponseEntity<TenantResponse> updateStatus(
             @PathVariable UUID id,
@@ -143,7 +142,7 @@ public class TenantController {
     }
 
     @PatchMapping("/{id}/branding")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
     @Operation(summary = "Actualizar personalización visual (Branding)")
     public ResponseEntity<TenantResponse> updateBranding(
             @PathVariable UUID id,
@@ -161,8 +160,7 @@ public class TenantController {
     }
 
     /**
-     * Un taller solo puede operar sobre si mismo. El superadministrador de la
-     * plataforma opera con alcance transversal.
+     * Verifies that the authenticated principal has permission to operate on the target tenant.
      */
     private void verificarAcceso(UUID tenantIdSolicitado, Authentication authentication) {
         UUID tenantDelContexto = TenantContextHolder.getTenantId();

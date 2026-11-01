@@ -11,7 +11,7 @@ public final class BrandColor implements Serializable {
 
     public BrandColor(String value) {
         if (value == null || value.trim().isEmpty()) {
-            this.value = "#2563EB"; // Color azul por defecto
+            this.value = "#2563EB"; // Default blue brand color
             return;
         }
         String normalized = value.trim();

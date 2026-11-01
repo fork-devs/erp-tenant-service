@@ -9,17 +9,9 @@ import org.springframework.stereotype.Component;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Serializa un evento de dominio a JSON.
+ * Serializes domain events to robust JSON format using Jackson.
  *
- * <p>El serializado anterior se construia con {@code String.format}, escapando
- * solo las comillas dobles. Un nombre comercial con una barra invertida o un
- * salto de linea producia un JSON INVALIDO, con lo que el mensaje era
- * imposible de parsear para cualquier consumidor. Aqui lo produce un
- * serializador de verdad, y el resultado es siempre JSON valido.
- *
- * <p>El identificador del evento lo genera el caso de uso, no el
- * serializador, de modo que el mismo identificador accompanye al mensaje en
- * todos sus reintentos y el consumidor pueda deduplicar.
+ * <p>Preserves immutable event identifiers across retry cycles for consumer deduplication.
  */
 @Component
 public class DomainEventSerializer {

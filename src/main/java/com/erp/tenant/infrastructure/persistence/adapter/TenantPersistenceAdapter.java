@@ -62,4 +62,18 @@ public class TenantPersistenceAdapter implements TenantRepositoryPort {
                 .map(TenantPersistenceMapper::toDomain)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Tenant> findByOwnerId(java.util.UUID ownerId) {
+        return springDataTenantRepository.findByOwnerId(ownerId).stream()
+                .map(TenantPersistenceMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByOwnerId(java.util.UUID ownerId) {
+        return springDataTenantRepository.existsByOwnerId(ownerId);
+    }
 }

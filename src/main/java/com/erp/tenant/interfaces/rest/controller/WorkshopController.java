@@ -52,6 +52,7 @@ public class WorkshopController {
     }
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     @PreAuthorize("isAuthenticated() and (hasAnyRole('SUPERADMIN', 'ADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER') or @multiTenancySecurityService.isAuthorizedForOwnerProfile(#request.ownerId()))")
     @Operation(summary = "Crear Taller", description = "Crea un nuevo taller automotriz asociado a un owner")
     public ResponseEntity<WorkshopResponse> createWorkshop(@Valid @RequestBody CreateWorkshopRequest request) {

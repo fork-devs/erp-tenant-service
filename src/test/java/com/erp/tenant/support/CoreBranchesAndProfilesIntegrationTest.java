@@ -137,8 +137,8 @@ class CoreBranchesAndProfilesIntegrationTest extends AbstractPostgresIntegration
         String createEmpJson = """
                 {
                     "userId": "%s",
-                    "firstName": "Luis",
-                    "lastName": "Mendoza",
+                    "firstName": "Raul",
+                    "lastName": "Castro",
                     "documentType": "DNI",
                     "documentNumber": "71234567",
                     "phone": "+51912345678"
@@ -150,7 +150,7 @@ class CoreBranchesAndProfilesIntegrationTest extends AbstractPostgresIntegration
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createEmpJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.firstName").value("Luis"))
+                .andExpect(jsonPath("$.firstName").value("Raul"))
                 .andExpect(jsonPath("$.documentNumber").value("71234567"))
                 .andReturn().getResponse().getContentAsString();
 

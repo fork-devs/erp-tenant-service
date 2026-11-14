@@ -78,6 +78,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UUID tenantId;
                 try {
                     tenantId = UUID.fromString(tenantClaim.toString());
+                    if (new UUID(0L, 0L).equals(tenantId)) {
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "El taller del token no puede ser UUID nil");
+                        return;
+                    }
                 } catch (IllegalArgumentException e) {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "El taller del token no es valido");
                     return;

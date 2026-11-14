@@ -44,7 +44,13 @@ class OwnerProfileServiceTest {
 
     @BeforeEach
     void setUp() {
+        com.erp.tenant.infrastructure.security.TenantContextHolder.setTenantId(UUID.randomUUID());
         ownerService = new OwnerProfileService(ownerRepositoryPort, tenantRepositoryPort, unitOfWork);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        com.erp.tenant.infrastructure.security.TenantContextHolder.clear();
     }
 
     @Test

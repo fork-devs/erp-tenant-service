@@ -85,15 +85,25 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
 
             // 2. Automatically seed base specialties for the new workshop
             if (specialtyRepositoryPort != null) {
-                for (WorkshopSpecialtyService.BaseSpecialtyDefinition def : WorkshopSpecialtyService.BASE_SPECIALTIES) {
-                    if (!specialtyRepositoryPort.existsByCode(savedTenant.getId().getValue(), savedTenant.getId().getValue(), def.code())) {
-                        specialtyRepositoryPort.save(WorkshopSpecialty.create(
-                                savedTenant.getId().getValue(),
-                                savedTenant.getId().getValue(),
-                                def.name(),
-                                def.code(),
-                                def.description()
-                        ));
+                java.util.UUID previousTenant = com.erp.tenant.infrastructure.security.TenantContextHolder.getTenantId();
+                com.erp.tenant.infrastructure.security.TenantContextHolder.setTenantId(savedTenant.getId().getValue());
+                try {
+                    for (WorkshopSpecialtyService.BaseSpecialtyDefinition def : WorkshopSpecialtyService.BASE_SPECIALTIES) {
+                        if (!specialtyRepositoryPort.existsByCode(savedTenant.getId().getValue(), savedTenant.getId().getValue(), def.code())) {
+                            specialtyRepositoryPort.save(WorkshopSpecialty.create(
+                                    savedTenant.getId().getValue(),
+                                    savedTenant.getId().getValue(),
+                                    def.name(),
+                                    def.code(),
+                                    def.description()
+                            ));
+                        }
+                    }
+                } finally {
+                    if (previousTenant == null) {
+                        com.erp.tenant.infrastructure.security.TenantContextHolder.clear();
+                    } else {
+                        com.erp.tenant.infrastructure.security.TenantContextHolder.setTenantId(previousTenant);
                     }
                 }
             }

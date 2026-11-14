@@ -42,7 +42,13 @@ class EmployeeProfileServiceTest {
 
     @BeforeEach
     void setUp() {
+        com.erp.tenant.infrastructure.security.TenantContextHolder.setTenantId(UUID.randomUUID());
         employeeService = new EmployeeProfileService(employeeRepositoryPort, unitOfWork, identityValidationPort);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        com.erp.tenant.infrastructure.security.TenantContextHolder.clear();
     }
 
     @Test

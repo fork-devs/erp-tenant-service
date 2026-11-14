@@ -1,13 +1,17 @@
 package com.erp.tenant.infrastructure.security;
 
 import com.erp.tenant.infrastructure.persistence.entity.BranchJpaEntity;
+import com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.entity.OwnerProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataBranchRepository;
+import com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataOwnerProfileRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -22,11 +26,20 @@ public class MultiTenancySecurityService {
 
     private final SpringDataBranchRepository branchRepository;
     private final SpringDataOwnerProfileRepository ownerProfileRepository;
+    private final SpringDataEmployeeProfileRepository employeeProfileRepository;
 
     public MultiTenancySecurityService(SpringDataBranchRepository branchRepository,
                                        SpringDataOwnerProfileRepository ownerProfileRepository) {
+        this(branchRepository, ownerProfileRepository, null);
+    }
+
+    @Autowired
+    public MultiTenancySecurityService(SpringDataBranchRepository branchRepository,
+                                       SpringDataOwnerProfileRepository ownerProfileRepository,
+                                       SpringDataEmployeeProfileRepository employeeProfileRepository) {
         this.branchRepository = branchRepository;
         this.ownerProfileRepository = ownerProfileRepository;
+        this.employeeProfileRepository = employeeProfileRepository;
     }
 
     /**
@@ -50,6 +63,7 @@ public class MultiTenancySecurityService {
     /**
      * Checks if the caller is authorized for the given branch.
      */
+    @Transactional(readOnly = true)
     public boolean isAuthorizedForBranch(UUID branchId) {
         if (branchId == null) {
             return false;
@@ -71,8 +85,9 @@ public class MultiTenancySecurityService {
 
     /**
      * Checks if the caller is authorized to view/access the given user ID.
-     * Allows SUPERADMIN, OWNER (global bypass for reading profiles), or self.
+     * Allows SUPERADMIN globally, tenant admins/owners strictly within their own tenant, or self.
      */
+    @Transactional(readOnly = true)
     public boolean isAuthorizedForUser(UUID userId) {
         if (userId == null) {
             return false;
@@ -81,10 +96,33 @@ public class MultiTenancySecurityService {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        if (hasRole(auth, "SUPERADMIN") || hasRole(auth, "OWNER") || hasRole(auth, "WORKSHOP_ADMIN") || hasRole(auth, "ADMIN_TALLER")) {
+        if (hasRole(auth, "SUPERADMIN")) {
             return true;
         }
-        return isSelf(auth, userId);
+        if (isSelf(auth, userId)) {
+            return true;
+        }
+        if (hasRole(auth, "OWNER") || hasRole(auth, "WORKSHOP_ADMIN") || hasRole(auth, "ADMIN_TALLER")) {
+            UUID currentTenant = TenantContextHolder.getTenantId();
+            if (currentTenant == null) {
+                return false;
+            }
+            if (employeeProfileRepository != null) {
+                Optional<EmployeeProfileJpaEntity> emp = employeeProfileRepository.findByUserId(userId);
+                if (emp.isPresent()) {
+                    return currentTenant.equals(emp.get().getTenantId());
+                }
+            }
+            if (ownerProfileRepository != null) {
+                Optional<OwnerProfileJpaEntity> owner = ownerProfileRepository.findByUserId(userId);
+                if (owner.isPresent()) {
+                    return currentTenant.equals(owner.get().getTenantId());
+                }
+            }
+            // User does not yet have a profile in any tenant (e.g. initial profile creation scoped to currentTenant)
+            return true;
+        }
+        return false;
     }
 
     /**

@@ -102,11 +102,15 @@ class MultiTenancySecurityServiceTest {
     }
 
     @Test
-    @DisplayName("Owner should have bypass on isAuthorizedForUser but NOT on isAuthorizedForSelf")
+    @DisplayName("Owner should be authorized for users in own tenant, denied cross-tenant, and restricted on isAuthorizedForSelf")
     void ownerBypassDistinction() {
+        UUID tenantA = UUID.randomUUID();
+        UUID tenantB = UUID.randomUUID();
         UUID callerUserId = UUID.randomUUID();
-        UUID otherUserId = UUID.randomUUID();
+        UUID sameTenantUserId = UUID.randomUUID();
+        UUID otherTenantUserId = UUID.randomUUID();
 
+        TenantContextHolder.setTenantId(tenantA);
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 callerUserId.toString(),
                 null,
@@ -114,12 +118,32 @@ class MultiTenancySecurityServiceTest {
         );
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        // Owner can view other user profiles
-        assertThat(securityService.isAuthorizedForUser(otherUserId)).isTrue();
+        com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository empRepo =
+                org.mockito.Mockito.mock(com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository.class);
+        MultiTenancySecurityService tenantScopedService =
+                new MultiTenancySecurityService(branchRepository, ownerProfileRepository, empRepo);
 
-        // But Owner CANNOT mutate or delete other user profiles (strictly self)
-        assertThat(securityService.isAuthorizedForSelf(otherUserId)).isFalse();
-        assertThat(securityService.isAuthorizedForSelf(callerUserId)).isTrue();
+        com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity sameTenantEmp =
+                new com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity();
+        sameTenantEmp.setTenantId(tenantA);
+        sameTenantEmp.setUserId(sameTenantUserId);
+
+        com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity otherTenantEmp =
+                new com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity();
+        otherTenantEmp.setTenantId(tenantB);
+        otherTenantEmp.setUserId(otherTenantUserId);
+
+        when(empRepo.findByUserId(sameTenantUserId)).thenReturn(Optional.of(sameTenantEmp));
+        when(empRepo.findByUserId(otherTenantUserId)).thenReturn(Optional.of(otherTenantEmp));
+
+        // Owner can view user profiles in the SAME tenant
+        assertThat(tenantScopedService.isAuthorizedForUser(sameTenantUserId)).isTrue();
+        // Owner CANNOT view user profiles in ANOTHER tenant
+        assertThat(tenantScopedService.isAuthorizedForUser(otherTenantUserId)).isFalse();
+
+        // Owner CANNOT mutate or delete other user profiles (strictly self)
+        assertThat(tenantScopedService.isAuthorizedForSelf(sameTenantUserId)).isFalse();
+        assertThat(tenantScopedService.isAuthorizedForSelf(callerUserId)).isTrue();
     }
 
     @Test

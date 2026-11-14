@@ -48,7 +48,7 @@ public class EmployeeProfileService implements ManageEmployeeProfileUseCase, Get
 
         UUID tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
-            tenantId = command.userId();
+            throw new IllegalStateException("Tenant context is required to create an employee profile");
         }
 
         DocumentType docType = DocumentType.fromString(command.documentType());

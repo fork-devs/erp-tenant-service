@@ -2,12 +2,16 @@ package com.erp.tenant.interfaces.rest.controller;
 
 import com.erp.tenant.application.usecase.ListDeadLetteredMessagesUseCase;
 import com.erp.tenant.application.usecase.ReactivateDeadLetteredMessageUseCase;
+import com.erp.tenant.domain.exception.TenantAccessDeniedException;
 import com.erp.tenant.domain.model.TenantOutboxMessage;
 import com.erp.tenant.domain.model.TenantOutboxStatus;
+import com.erp.tenant.infrastructure.security.TenantContextHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,23 +49,41 @@ public class OutboxAdminController {
     public ResponseEntity<List<OutboxDeadLetterResponse>> listDeadLetters(
             @RequestParam(value = "tenantId", required = false) UUID tenantId,
             @RequestParam(value = "limit", defaultValue = "50") int limit) {
+        UUID effectiveTenantId = resolveAuthorizedTenantId(tenantId);
         int effectiveLimit = Math.max(1, Math.min(limit, MAX_LIMIT));
-        List<OutboxDeadLetterResponse> responses = listDeadLetteredMessagesUseCase.list(tenantId, effectiveLimit).stream()
+        List<OutboxDeadLetterResponse> responses = listDeadLetteredMessagesUseCase.list(effectiveTenantId, effectiveLimit).stream()
                 .map(OutboxDeadLetterResponse::from)
                 .toList();
         return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/dead-letters/{id}/reactivate")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'WORKSHOP_ADMIN', 'ADMIN_TALLER')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @Operation(summary = "Reactivar un mensaje agotado",
-            description = "Devuelve el mensaje a la cola de pendientes con el contador de intentos restablecido")
+            description = "Devuelve el mensaje a la cola de pendientes con el contador de intentos restablecido (solo SUPERADMIN)")
     public ResponseEntity<OutboxDeadLetterResponse> reactivate(@PathVariable UUID id) {
         TenantOutboxMessage message = reactivateDeadLetteredMessageUseCase.reactivate(id);
         if (message == null) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(OutboxDeadLetterResponse.from(message));
+    }
+
+    private UUID resolveAuthorizedTenantId(UUID requestedTenantId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPERADMIN".equalsIgnoreCase(a.getAuthority()) || "SUPERADMIN".equalsIgnoreCase(a.getAuthority()));
+        if (isSuperAdmin) {
+            return requestedTenantId;
+        }
+        UUID contextTenant = TenantContextHolder.getTenantId();
+        if (contextTenant == null) {
+            throw new TenantAccessDeniedException("Missing tenant context for outbox query");
+        }
+        if (requestedTenantId != null && !requestedTenantId.equals(contextTenant)) {
+            throw new TenantAccessDeniedException("Cannot query outbox dead letters for another tenant");
+        }
+        return contextTenant;
     }
 
     public record OutboxDeadLetterResponse(

@@ -58,7 +58,7 @@ public class OwnerProfileService implements ManageOwnerProfileUseCase, GetOwnerP
 
         UUID tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
-            tenantId = command.userId();
+            throw new IllegalStateException("Tenant context is required to create an owner profile");
         }
 
         DocumentType docType = DocumentType.fromString(command.documentType());

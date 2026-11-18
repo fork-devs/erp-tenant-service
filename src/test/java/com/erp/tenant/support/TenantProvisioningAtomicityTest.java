@@ -44,7 +44,7 @@ class TenantProvisioningAtomicityTest extends AbstractPostgresIntegrationTest {
                 .when(outboxRepositoryPort).save(any());
 
         assertThrows(RuntimeException.class, () -> tenantProvisioningService.provisionTenant(
-                new ProvisionTenantCommand("Taller Atomico", "20609999999", "BASICO", null, "#1A2B3C")));
+                new ProvisionTenantCommand("Taller Atomico", "20609999999", "BASIC", null, "#1A2B3C")));
 
         // Tenant must NOT exist: outbox failure rolled back entire transaction.
         assertEquals(tenantsBefore, tenantRepositoryPort.findAll().size(),
@@ -62,7 +62,7 @@ class TenantProvisioningAtomicityTest extends AbstractPostgresIntegrationTest {
     void whenProvisioningSucceedsTenantAndEventAreCommittedTogether() {
         // Unique RUC per test execution.
         TenantResult result = tenantProvisioningService.provisionTenant(
-                new ProvisionTenantCommand("Taller Correcto", uniqueRuc(), "BASICO", null, "#1A2B3C"));
+                new ProvisionTenantCommand("Taller Correcto", uniqueRuc(), "BASIC", null, "#1A2B3C"));
 
         // Relative counts ensure independence from test execution order.
         List<TenantOutboxMessage> pending = unitOfWork.callInTransaction(

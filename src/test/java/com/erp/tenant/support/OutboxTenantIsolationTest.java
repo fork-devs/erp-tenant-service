@@ -33,7 +33,7 @@ class OutboxTenantIsolationTest extends AbstractPostgresIntegrationTest {
         TenantResult result = tenantProvisioningService.provisionTenant(new ProvisionTenantCommand(
                 "Taller de Prueba",
                 "20601234567",
-                "BASICO",
+                "BASIC",
                 null,
                 "#1A2B3C"));
 

@@ -9,10 +9,6 @@ public enum PlanCode {
         if (code == null) {
             throw new IllegalArgumentException("Plan code cannot be null");
         }
-        String normalized = code.trim().toUpperCase();
-        if ("BASICO".equals(normalized)) {
-            return BASIC;
-        }
-        return PlanCode.valueOf(normalized);
+        return PlanCode.valueOf(code.trim().toUpperCase());
     }
 }

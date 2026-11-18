@@ -70,7 +70,7 @@ class TenantManagementServiceTest {
     void setUp() {
         managementService = new TenantManagementService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
                 DIRECTO, new com.erp.tenant.infrastructure.messaging.DomainEventSerializer(new com.fasterxml.jackson.databind.ObjectMapper()));
-        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
+        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASIC, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
         proPlan = new Plan(UUID.randomUUID(), PlanCode.PRO, 10, 200, 5000, 500, 40, new BigDecimal("249.00"));
         sampleTenant = Tenant.create("Taller Test", Ruc.of("20601234567"), basicPlan.getId(), BrandColor.of("#2563EB"));
     }
@@ -168,7 +168,7 @@ class TenantManagementServiceTest {
         assertNotNull(limits);
         assertEquals(tenantId, limits.tenantId());
         assertEquals("ACTIVE", limits.status());
-        assertEquals("BASICO", limits.planCode());
+        assertEquals("BASIC", limits.planCode());
         assertEquals(3, limits.maxUsers());
         assertEquals(50, limits.maxVehicles());
         assertEquals(1000, limits.maxIotMsgPerDay());

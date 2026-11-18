@@ -158,8 +158,8 @@ public class TenantProvisioningService implements ProvisionTenantUseCase {
                     .orElseThrow(() -> new PlanNotFoundException(planCode.name()));
         }
         // Default subscription plan
-        return planRepositoryPort.findByCode(PlanCode.BASICO)
-                .orElseThrow(() -> new PlanNotFoundException("BASICO"));
+        return planRepositoryPort.findByCode(PlanCode.BASIC)
+                .orElseThrow(() -> new PlanNotFoundException("BASIC"));
     }
 
 

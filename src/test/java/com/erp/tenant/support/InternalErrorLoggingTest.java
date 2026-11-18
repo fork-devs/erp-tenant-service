@@ -56,7 +56,7 @@ class InternalErrorLoggingTest extends AbstractPostgresIntegrationTest {
         mockMvc.perform(post("/api/v1/tenants")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"commercialName\":\"Taller\",\"ruc\":\"20601234567\","
-                                + "\"planCode\":\"BASICO\",\"brandColor\":\"#1A2B3C\"}"))
+                                + "\"planCode\":\"BASIC\",\"brandColor\":\"#1A2B3C\"}"))
                 .andExpect(status().is5xxServerError())
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("NullPointerException"))));

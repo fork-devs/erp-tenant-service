@@ -1,17 +1,17 @@
 package com.erp.tenant.domain.model;
 
 public enum PlanCode {
-    BASICO,
+    BASIC,
     PRO,
     ENTERPRISE;
 
     public static PlanCode fromString(String code) {
         if (code == null) {
-            throw new IllegalArgumentException("El código de plan no puede ser nulo");
+            throw new IllegalArgumentException("Plan code cannot be null");
         }
         String normalized = code.trim().toUpperCase();
-        if ("BASIC".equals(normalized)) {
-            return BASICO;
+        if ("BASICO".equals(normalized)) {
+            return BASIC;
         }
         return PlanCode.valueOf(normalized);
     }

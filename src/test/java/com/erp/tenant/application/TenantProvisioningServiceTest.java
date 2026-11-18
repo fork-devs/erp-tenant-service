@@ -65,7 +65,7 @@ class TenantProvisioningServiceTest {
     void setUp() {
         provisioningService = new TenantProvisioningService(tenantRepositoryPort, planRepositoryPort, outboxRepositoryPort,
                 DIRECTO, new com.erp.tenant.infrastructure.messaging.DomainEventSerializer(new com.fasterxml.jackson.databind.ObjectMapper()));
-        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASICO, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
+        basicPlan = new Plan(UUID.randomUUID(), PlanCode.BASIC, 3, 50, 1000, 100, 15, new BigDecimal("99.00"));
     }
 
     @Test
@@ -75,13 +75,13 @@ class TenantProvisioningServiceTest {
         ProvisionTenantCommand command = new ProvisionTenantCommand(
                 "Taller Mecánico El Veloz",
                 rucStr,
-                "BASICO",
+                "BASIC",
                 null,
                 "#2563EB"
         );
 
         when(tenantRepositoryPort.existsByRuc(Ruc.of(rucStr))).thenReturn(false);
-        when(planRepositoryPort.findByCode(PlanCode.BASICO)).thenReturn(Optional.of(basicPlan));
+        when(planRepositoryPort.findByCode(PlanCode.BASIC)).thenReturn(Optional.of(basicPlan));
         when(tenantRepositoryPort.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TenantResult result = provisioningService.provisionTenant(command);
@@ -90,7 +90,7 @@ class TenantProvisioningServiceTest {
         assertNotNull(result.id());
         assertEquals("Taller Mecánico El Veloz", result.commercialName());
         assertEquals(rucStr, result.ruc());
-        assertEquals("BASICO", result.planCode());
+        assertEquals("BASIC", result.planCode());
         assertEquals("ACTIVE", result.status());
 
         // Verify tenant was saved
@@ -115,7 +115,7 @@ class TenantProvisioningServiceTest {
         ProvisionTenantCommand command = new ProvisionTenantCommand(
                 "Taller Duplicado",
                 rucStr,
-                "BASICO",
+                "BASIC",
                 null,
                 null
         );

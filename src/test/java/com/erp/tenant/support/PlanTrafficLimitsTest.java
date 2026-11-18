@@ -29,12 +29,12 @@ class PlanTrafficLimitsTest extends AbstractPostgresIntegrationTest {
 
     @Test
     void elPlanBasicoExponeSusLimitesDeTrafico() throws Exception {
-        TenantResult taller = crearTaller("Taller Basico", "20612345678", "BASICO");
+        TenantResult taller = crearTaller("Taller Basico", "20612345678", "BASIC");
 
         mockMvc.perform(get("/api/v1/internal/tenants/" + taller.id() + "/limits")
                         .header("Authorization", "Bearer " + tokenDe(taller.id(), "ADMIN_TALLER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.planCode").value("BASICO"))
+                .andExpect(jsonPath("$.planCode").value("BASIC"))
                 .andExpect(jsonPath("$.maxRequestsPerMinute").value(100))
                 .andExpect(jsonPath("$.maxConcurrentSlots").value(15));
     }

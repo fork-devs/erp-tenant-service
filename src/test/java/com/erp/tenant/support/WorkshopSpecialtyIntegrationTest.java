@@ -154,7 +154,7 @@ class WorkshopSpecialtyIntegrationTest extends AbstractPostgresIntegrationTest {
 
     private TenantResult crearTaller(String nombre, String ruc) {
         return tenantProvisioningService.provisionTenant(
-                new ProvisionTenantCommand(nombre, ruc, "BASICO", null, "#1A2B3C"));
+                new ProvisionTenantCommand(nombre, ruc, "BASIC", null, "#1A2B3C"));
     }
 
     private String tokenDe(UUID tenantId, String rol) {

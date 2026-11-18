@@ -48,8 +48,8 @@ class TenantRoleEnforcementTest extends AbstractPostgresIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        Plan plan = planRepositoryPort.findByCode(PlanCode.BASICO)
-                .orElseThrow(() -> new AssertionError("El plan BASICO deberia estar sembrado"));
+        Plan plan = planRepositoryPort.findByCode(PlanCode.BASIC)
+                .orElseThrow(() -> new AssertionError("El plan BASIC deberia estar sembrado"));
 
         Tenant tenant = Tenant.create(
                 "Taller de Prueba " + UUID.randomUUID().toString().substring(0, 6),

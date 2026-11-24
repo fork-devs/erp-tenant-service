@@ -33,6 +33,9 @@ public class BranchJpaEntity {
     @Column(nullable = false, length = 50)
     private String phone;
 
+    @Column(name = "banner_image_url", length = 500)
+    private String bannerImageUrl;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -84,6 +87,14 @@ public class BranchJpaEntity {
 
     public UUID getWorkshopId() {
         return workshopId;
+    }
+
+    public String getBannerImageUrl() {
+        return bannerImageUrl;
+    }
+
+    public void setBannerImageUrl(String bannerImageUrl) {
+        this.bannerImageUrl = bannerImageUrl;
     }
 
     public void setWorkshopId(UUID workshopId) {

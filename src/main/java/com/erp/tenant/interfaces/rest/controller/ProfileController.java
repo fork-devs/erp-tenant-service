@@ -2,33 +2,92 @@ package com.erp.tenant.interfaces.rest.controller;
 
 import com.erp.tenant.application.dto.result.ProfileUnifiedResult;
 import com.erp.tenant.application.usecase.GetProfilesUseCase;
+import com.erp.tenant.domain.exception.ProfileNotFoundException;
 import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity;
+import com.erp.tenant.infrastructure.persistence.entity.OwnerProfileJpaEntity;
+import com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository;
+import com.erp.tenant.infrastructure.persistence.repository.SpringDataOwnerProfileRepository;
 import com.erp.tenant.infrastructure.security.MultiTenancySecurityService;
 import com.erp.tenant.interfaces.rest.dto.response.ProfileUnifiedResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/profiles")
-@Tag(name = "Profiles", description = "Consultas transversales de perfiles de negocio y roles de usuario")
+@Tag(name = "Profiles", description = "Cross-cutting business profile and user role queries")
 public class ProfileController {
+
+    public record UpdateProfileImageRequest(@NotBlank String profileImageUrl) {}
+
+    public record OwnerSummaryView(
+            UUID ownerId,
+            String firstName,
+            String lastName,
+            String documentType,
+            String documentNumber,
+            String phone,
+            String profileImageUrl
+    ) {}
+
+    public record EmployeeSummaryView(
+            UUID employeeId,
+            UUID workshopId,
+            String firstName,
+            String lastName,
+            String documentType,
+            String documentNumber,
+            String phone,
+            String profileImageUrl
+    ) {}
+
+    public record UserProfileContextResponse(
+            UUID userId,
+            List<String> roles,
+            OwnerSummaryView owner,
+            EmployeeSummaryView employee,
+            Object customer
+    ) {}
 
     private final GetProfilesUseCase getProfilesUseCase;
     private final MultiTenancySecurityService securityService;
+    private final SpringDataOwnerProfileRepository ownerProfileRepository;
+    private final SpringDataEmployeeProfileRepository employeeProfileRepository;
 
     public ProfileController(GetProfilesUseCase getProfilesUseCase,
                              MultiTenancySecurityService securityService) {
+        this(getProfilesUseCase, securityService, null, null);
+    }
+
+    @Autowired
+    public ProfileController(GetProfilesUseCase getProfilesUseCase,
+                             MultiTenancySecurityService securityService,
+                             SpringDataOwnerProfileRepository ownerProfileRepository,
+                             SpringDataEmployeeProfileRepository employeeProfileRepository) {
         this.getProfilesUseCase = getProfilesUseCase;
         this.securityService = securityService;
+        this.ownerProfileRepository = ownerProfileRepository;
+        this.employeeProfileRepository = employeeProfileRepository;
     }
 
     @GetMapping("/roles")
@@ -52,5 +111,79 @@ public class ProfileController {
             throw new TenantAccessDeniedException("Access denied for profile document: " + documentNumber);
         }
         return ResponseEntity.ok(ProfileUnifiedResponse.from(result));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get authenticated user profile context")
+    @Transactional(readOnly = true)
+    public ResponseEntity<UserProfileContextResponse> getMyProfileContext(Authentication auth) {
+        UUID userId = resolveAuthenticatedUserId(auth);
+        return ResponseEntity.ok(buildContextResponse(userId, auth));
+    }
+
+    @PutMapping("/me/image")
+    @PatchMapping("/me/image")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update authenticated user profile image URL")
+    @Transactional
+    public ResponseEntity<UserProfileContextResponse> updateMyProfileImage(
+            @Valid @RequestBody UpdateProfileImageRequest request,
+            Authentication auth) {
+        UUID userId = resolveAuthenticatedUserId(auth);
+        Optional<OwnerProfileJpaEntity> ownerOpt = ownerProfileRepository != null
+                ? ownerProfileRepository.findByUserId(userId) : Optional.empty();
+        Optional<EmployeeProfileJpaEntity> empOpt = employeeProfileRepository != null
+                ? employeeProfileRepository.findByUserId(userId) : Optional.empty();
+
+        if (ownerOpt.isEmpty() && empOpt.isEmpty()) {
+            throw new ProfileNotFoundException("No Core profiles associated with user: " + userId);
+        }
+
+        Instant now = Instant.now();
+        ownerOpt.ifPresent(o -> {
+            o.setProfileImageUrl(request.profileImageUrl().trim());
+            o.setUpdatedAt(now);
+            ownerProfileRepository.save(o);
+        });
+        empOpt.ifPresent(e -> {
+            e.setProfileImageUrl(request.profileImageUrl().trim());
+            e.setUpdatedAt(now);
+            employeeProfileRepository.save(e);
+        });
+
+        return ResponseEntity.ok(buildContextResponse(userId, auth));
+    }
+
+    private UserProfileContextResponse buildContextResponse(UUID userId, Authentication auth) {
+        List<String> roles = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        OwnerSummaryView ownerView = ownerProfileRepository != null
+                ? ownerProfileRepository.findByUserId(userId)
+                .map(o -> new OwnerSummaryView(
+                        o.getId(), o.getFirstName(), o.getLastName(),
+                        o.getDocumentType(), o.getDocumentNumber(), o.getPhone(), o.getProfileImageUrl()))
+                .orElse(null)
+                : null;
+        EmployeeSummaryView empView = employeeProfileRepository != null
+                ? employeeProfileRepository.findByUserId(userId)
+                .map(e -> new EmployeeSummaryView(
+                        e.getId(), e.getTenantId(), e.getFirstName(), e.getLastName(),
+                        e.getDocumentType(), e.getDocumentNumber(), e.getPhone(), e.getProfileImageUrl()))
+                .orElse(null)
+                : null;
+        return new UserProfileContextResponse(userId, roles, ownerView, empView, null);
+    }
+
+    private UUID resolveAuthenticatedUserId(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new TenantAccessDeniedException("Authenticated user ID is missing");
+        }
+        try {
+            return UUID.fromString(auth.getName().trim());
+        } catch (IllegalArgumentException ex) {
+            throw new TenantAccessDeniedException("Invalid authenticated user ID");
+        }
     }
 }

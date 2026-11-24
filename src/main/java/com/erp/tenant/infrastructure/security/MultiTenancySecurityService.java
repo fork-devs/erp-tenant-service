@@ -3,9 +3,11 @@ package com.erp.tenant.infrastructure.security;
 import com.erp.tenant.infrastructure.persistence.entity.BranchJpaEntity;
 import com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.entity.OwnerProfileJpaEntity;
+import com.erp.tenant.infrastructure.persistence.entity.TenantJpaEntity;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataBranchRepository;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataOwnerProfileRepository;
+import com.erp.tenant.infrastructure.persistence.repository.SpringDataTenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -27,24 +29,34 @@ public class MultiTenancySecurityService {
     private final SpringDataBranchRepository branchRepository;
     private final SpringDataOwnerProfileRepository ownerProfileRepository;
     private final SpringDataEmployeeProfileRepository employeeProfileRepository;
+    private final SpringDataTenantRepository tenantRepository;
 
     public MultiTenancySecurityService(SpringDataBranchRepository branchRepository,
                                        SpringDataOwnerProfileRepository ownerProfileRepository) {
-        this(branchRepository, ownerProfileRepository, null);
+        this(branchRepository, ownerProfileRepository, null, null);
+    }
+
+    public MultiTenancySecurityService(SpringDataBranchRepository branchRepository,
+                                       SpringDataOwnerProfileRepository ownerProfileRepository,
+                                       SpringDataEmployeeProfileRepository employeeProfileRepository) {
+        this(branchRepository, ownerProfileRepository, employeeProfileRepository, null);
     }
 
     @Autowired
     public MultiTenancySecurityService(SpringDataBranchRepository branchRepository,
                                        SpringDataOwnerProfileRepository ownerProfileRepository,
-                                       SpringDataEmployeeProfileRepository employeeProfileRepository) {
+                                       SpringDataEmployeeProfileRepository employeeProfileRepository,
+                                       @Autowired(required = false) SpringDataTenantRepository tenantRepository) {
         this.branchRepository = branchRepository;
         this.ownerProfileRepository = ownerProfileRepository;
         this.employeeProfileRepository = employeeProfileRepository;
+        this.tenantRepository = tenantRepository;
     }
 
     /**
      * Checks if the caller is authorized for the given workshop.
      */
+    @Transactional(readOnly = true)
     public boolean isAuthorizedForWorkshop(UUID workshopId) {
         if (workshopId == null) {
             return false;
@@ -57,7 +69,25 @@ public class MultiTenancySecurityService {
             return true;
         }
         UUID contextTenant = TenantContextHolder.getTenantId();
-        return contextTenant != null && contextTenant.equals(workshopId);
+        if (contextTenant != null && contextTenant.equals(workshopId)) {
+            return true;
+        }
+        if (tenantRepository != null && ownerProfileRepository != null && auth.getName() != null) {
+            try {
+                UUID userId = UUID.fromString(auth.getName());
+                Optional<OwnerProfileJpaEntity> ownerOpt = ownerProfileRepository.findByUserId(userId);
+                if (ownerOpt.isPresent()) {
+                    Optional<TenantJpaEntity> workshopOpt = tenantRepository.findById(workshopId);
+                    if (workshopOpt.isPresent()
+                            && ownerOpt.get().getId().equals(workshopOpt.get().getOwnerId())) {
+                        return true;
+                    }
+                }
+            } catch (IllegalArgumentException ignored) {
+                return false;
+            }
+        }
+        return false;
     }
 
     /**

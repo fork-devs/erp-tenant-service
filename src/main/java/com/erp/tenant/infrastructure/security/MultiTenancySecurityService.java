@@ -61,6 +61,24 @@ public class MultiTenancySecurityService {
     }
 
     /**
+     * Checks if the caller holds a given permission within the specified workshop.
+     */
+    public boolean hasWorkshopPermission(UUID workshopId, String permission) {
+        if (!isAuthorizedForWorkshop(workshopId)) {
+            return false;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        return hasRole(auth, "SUPERADMIN")
+                || hasRole(auth, "OWNER")
+                || hasRole(auth, "WORKSHOP_ADMIN")
+                || hasRole(auth, "ADMIN_TALLER")
+                || hasRole(auth, "ADMIN");
+    }
+
+    /**
      * Checks if the caller is authorized for the given branch.
      */
     @Transactional(readOnly = true)

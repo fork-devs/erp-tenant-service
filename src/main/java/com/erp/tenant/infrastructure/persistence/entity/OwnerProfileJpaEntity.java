@@ -36,6 +36,9 @@ public class OwnerProfileJpaEntity {
     @Column(nullable = false, length = 30)
     private String phone;
 
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -128,6 +131,14 @@ public class OwnerProfileJpaEntity {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public Instant getCreatedAt() {

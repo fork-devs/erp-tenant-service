@@ -4,6 +4,7 @@ import com.erp.tenant.application.dto.result.ProfileUnifiedResult;
 import com.erp.tenant.application.usecase.GetProfilesUseCase;
 import com.erp.tenant.domain.exception.ProfileNotFoundException;
 import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.infrastructure.adapter.external.MediaUploadClient;
 import com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.entity.OwnerProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataEmployeeProfileRepository;
@@ -122,6 +123,9 @@ public class ProfileController {
         return ResponseEntity.ok(buildContextResponse(userId, auth));
     }
 
+    @Autowired(required = false)
+    private MediaUploadClient mediaUploadClient;
+
     @PutMapping("/me/image")
     @PatchMapping("/me/image")
     @PreAuthorize("isAuthenticated()")
@@ -153,6 +157,20 @@ public class ProfileController {
         });
 
         return ResponseEntity.ok(buildContextResponse(userId, auth));
+    }
+
+    @PutMapping(value = "/me/image/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Upload authenticated user profile image file")
+    @Transactional
+    public ResponseEntity<UserProfileContextResponse> uploadMyProfileImage(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            Authentication auth) {
+        if (mediaUploadClient == null) {
+            throw new IllegalStateException("Media upload client is not configured");
+        }
+        MediaUploadClient.UploadedMedia uploaded = mediaUploadClient.upload(file, "profiles");
+        return updateMyProfileImage(new UpdateProfileImageRequest(uploaded.url()), auth);
     }
 
     private UserProfileContextResponse buildContextResponse(UUID userId, Authentication auth) {

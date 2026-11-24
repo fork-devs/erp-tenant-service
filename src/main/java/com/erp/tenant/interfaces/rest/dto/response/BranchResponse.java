@@ -10,8 +10,13 @@ public record BranchResponse(
         String code,
         String name,
         String address,
-        String phone
+        String phone,
+        String bannerImageUrl
 ) {
+    public BranchResponse(UUID id, UUID workshopId, String code, String name, String address, String phone) {
+        this(id, workshopId, code, name, address, phone, null);
+    }
+
     public static BranchResponse from(BranchResult result) {
         if (result == null) return null;
         return new BranchResponse(
@@ -20,7 +25,8 @@ public record BranchResponse(
                 result.code(),
                 result.name(),
                 result.address(),
-                result.phone()
+                result.phone(),
+                null
         );
     }
 }

@@ -72,7 +72,9 @@ public class BranchController {
                 request.code(),
                 request.name(),
                 request.address(),
-                request.phone()
+                request.phone(),
+                request.latitude(),
+                request.longitude()
         );
         BranchResult result = manageBranchUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(BranchResponse.from(result));
@@ -82,13 +84,15 @@ public class BranchController {
     @PreAuthorize("isAuthenticated() and @multiTenancySecurityService.isAuthorizedForBranch(#branchId)")
     @Operation(summary = "Actualizar Sede", description = "Actualiza datos de la sede")
     public ResponseEntity<BranchResponse> updateBranch(@PathVariable UUID branchId,
-                                                      @RequestBody UpdateBranchRequest request) {
+                                                      @Valid @RequestBody UpdateBranchRequest request) {
         UpdateBranchCommand command = new UpdateBranchCommand(
                 branchId,
                 request.code(),
                 request.name(),
                 request.address(),
-                request.phone()
+                request.phone(),
+                request.latitude(),
+                request.longitude()
         );
         BranchResult result = manageBranchUseCase.update(command);
         return ResponseEntity.ok(BranchResponse.from(result));
@@ -150,7 +154,9 @@ public class BranchController {
                 entity.getName(),
                 entity.getAddress(),
                 entity.getPhone(),
-                entity.getBannerImageUrl()
+                entity.getBannerImageUrl(),
+                entity.getLatitude(),
+                entity.getLongitude()
         ));
     }
 

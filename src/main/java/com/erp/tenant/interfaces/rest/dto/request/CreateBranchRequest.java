@@ -1,5 +1,7 @@
 package com.erp.tenant.interfaces.rest.dto.request;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
@@ -18,5 +20,17 @@ public record CreateBranchRequest(
         String address,
 
         @NotBlank(message = "phone is required")
-        String phone
-) {}
+        String phone,
+
+        @DecimalMin(value = "-90.0", message = "latitude must be >= -90.0")
+        @DecimalMax(value = "90.0", message = "latitude must be <= 90.0")
+        Double latitude,
+
+        @DecimalMin(value = "-180.0", message = "longitude must be >= -180.0")
+        @DecimalMax(value = "180.0", message = "longitude must be <= 180.0")
+        Double longitude
+) {
+    public CreateBranchRequest(UUID workshopId, String code, String name, String address, String phone) {
+        this(workshopId, code, name, address, phone, null, null);
+    }
+}

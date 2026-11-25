@@ -8,5 +8,7 @@ import java.util.UUID;
 
 public interface SpringDataWorkshopRoleAssignmentRepository extends JpaRepository<WorkshopRoleAssignmentJpaEntity, UUID> {
     boolean existsByWorkshopIdAndWorkshopRoleIdAndUserId(UUID workshopId, UUID workshopRoleId, UUID userId);
+    boolean existsByWorkshopIdAndWorkshopRoleIdAndUserIdAndBranchId(UUID workshopId, UUID workshopRoleId, UUID userId, UUID branchId);
+    boolean existsByWorkshopIdAndWorkshopRoleIdAndUserIdAndBranchIdIsNull(UUID workshopId, UUID workshopRoleId, UUID userId);
     List<WorkshopRoleAssignmentJpaEntity> findByWorkshopIdAndUserId(UUID workshopId, UUID userId);
 }

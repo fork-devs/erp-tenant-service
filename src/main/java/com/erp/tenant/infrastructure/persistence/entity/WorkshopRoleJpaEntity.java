@@ -36,6 +36,9 @@ public class WorkshopRoleJpaEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String permissions;
 
+    @Column(name = "template_code", length = 60)
+    private String templateCode;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -71,6 +74,8 @@ public class WorkshopRoleJpaEntity {
     public void setActive(boolean active) { this.active = active; }
     public String getPermissions() { return permissions; }
     public void setPermissions(String permissions) { this.permissions = permissions; }
+    public String getTemplateCode() { return templateCode; }
+    public void setTemplateCode(String templateCode) { this.templateCode = templateCode; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }

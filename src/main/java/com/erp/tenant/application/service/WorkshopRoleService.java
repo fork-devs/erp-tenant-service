@@ -16,14 +16,68 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class WorkshopRoleService {
+
+    public record RoleTemplateView(
+            String code,
+            String name,
+            String description,
+            boolean activated,
+            Set<String> permissions
+    ) {}
+
+    private record RoleTemplateDefinition(
+            String code,
+            String name,
+            String description,
+            Set<String> permissions
+    ) {}
+
+    private static final Map<String, RoleTemplateDefinition> ROLE_TEMPLATES = buildRoleTemplates();
+
+    private static Map<String, RoleTemplateDefinition> buildRoleTemplates() {
+        Map<String, RoleTemplateDefinition> templates = new LinkedHashMap<>();
+        templates.put("BRANCH_MANAGER", new RoleTemplateDefinition(
+                "BRANCH_MANAGER",
+                "Jefe de Sede",
+                "Manages daily operations, staff, inventory, quotes, and analytics for an assigned branch.",
+                Set.of(
+                        "WORKORDER_READ", "WORKORDER_EXECUTE",
+                        "INVENTORY_READ", "INVENTORY_MANAGE",
+                        "SERVICE_MANAGE",
+                        "QUOTE_READ", "QUOTE_CREATE", "QUOTE_APPROVE", "QUOTE_CANCEL",
+                        "VOUCHER_READ", "CHECKOUT_PROCESS",
+                        "APPOINTMENT_MANAGE",
+                        "STAFF_READ", "STAFF_MANAGE", "SPECIALTY_MANAGE",
+                        "BRANCH_READ", "MEDIA_UPLOAD", "ANALYTICS_READ"
+                )
+        ));
+        templates.put("SECRETARY", new RoleTemplateDefinition(
+                "SECRETARY",
+                "Secretaria / Recepcionista",
+                "Handles front-desk appointments, read-only order/quote tracking, and checkout billing.",
+                Set.of(
+                        "APPOINTMENT_MANAGE",
+                        "WORKORDER_READ",
+                        "QUOTE_READ",
+                        "VOUCHER_READ",
+                        "CHECKOUT_PROCESS",
+                        "BRANCH_READ",
+                        "INVENTORY_READ"
+                )
+        ));
+        return Map.copyOf(templates);
+    }
 
     public record WorkshopRoleView(
             UUID id,
@@ -65,6 +119,47 @@ public class WorkshopRoleService {
         return roleRepository.findByWorkshopIdAndActiveTrueOrderByNameAsc(workshopId).stream()
                 .map(this::toView)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RoleTemplateView> listTemplates(UUID workshopId) {
+        return ROLE_TEMPLATES.values().stream()
+                .map(t -> new RoleTemplateView(
+                        t.code(),
+                        t.name(),
+                        t.description(),
+                        roleRepository.existsByWorkshopIdAndTemplateCodeIgnoreCase(workshopId, t.code()),
+                        t.permissions()
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public WorkshopRoleView activateTemplate(UUID workshopId, UUID actorUserId, String templateCode) {
+        if (templateCode == null || templateCode.isBlank()) {
+            throw new IllegalArgumentException("Template code is required");
+        }
+        String normalizedCode = templateCode.trim().toUpperCase(Locale.ROOT);
+        RoleTemplateDefinition def = ROLE_TEMPLATES.get(normalizedCode);
+        if (def == null) {
+            throw new IllegalArgumentException("Unknown role template: " + templateCode);
+        }
+        if (roleRepository.existsByWorkshopIdAndTemplateCodeIgnoreCase(workshopId, def.code())
+                || roleRepository.existsByWorkshopIdAndNameIgnoreCase(workshopId, def.name())) {
+            throw new IllegalStateException("Role template already activated in workshop: " + def.code());
+        }
+        Set<String> validated = validatePermissions(def.permissions());
+        UUID tenantId = resolveTenantId(workshopId);
+        Instant now = Instant.now();
+        String serializedPerms = String.join(",", validated);
+        WorkshopRoleJpaEntity entity = new WorkshopRoleJpaEntity(
+                UUID.randomUUID(), tenantId, workshopId, def.name(), def.description(),
+                false, true, serializedPerms, now, now
+        );
+        entity.setTemplateCode(def.code());
+        roleRepository.save(entity);
+        recordAudit(tenantId, workshopId, entity.getId(), actorUserId, null, "TEMPLATE_ACTIVATED", def.name(), serializedPerms);
+        return toView(entity);
     }
 
     @Transactional
@@ -132,6 +227,11 @@ public class WorkshopRoleService {
 
     @Transactional
     public void assignRole(UUID workshopId, UUID roleId, UUID actorUserId, UUID targetUserId) {
+        assignRole(workshopId, roleId, actorUserId, targetUserId, null);
+    }
+
+    @Transactional
+    public void assignRole(UUID workshopId, UUID roleId, UUID actorUserId, UUID targetUserId, UUID branchId) {
         if (targetUserId == null) {
             throw new IllegalArgumentException("Target userId is required");
         }
@@ -140,9 +240,12 @@ public class WorkshopRoleService {
         if (!entity.isActive()) {
             throw new IllegalArgumentException("Cannot assign an inactive workshop role");
         }
-        if (!assignmentRepository.existsByWorkshopIdAndWorkshopRoleIdAndUserId(workshopId, roleId, targetUserId)) {
+        boolean alreadyAssigned = branchId == null
+                ? assignmentRepository.existsByWorkshopIdAndWorkshopRoleIdAndUserIdAndBranchIdIsNull(workshopId, roleId, targetUserId)
+                : assignmentRepository.existsByWorkshopIdAndWorkshopRoleIdAndUserIdAndBranchId(workshopId, roleId, targetUserId, branchId);
+        if (!alreadyAssigned) {
             assignmentRepository.save(new WorkshopRoleAssignmentJpaEntity(
-                    UUID.randomUUID(), entity.getTenantId(), workshopId, roleId, targetUserId, Instant.now()
+                    UUID.randomUUID(), entity.getTenantId(), workshopId, roleId, targetUserId, branchId, Instant.now()
             ));
         }
         recordAudit(entity.getTenantId(), workshopId, roleId, actorUserId, targetUserId, "ASSIGNED", entity.getName(), entity.getPermissions());

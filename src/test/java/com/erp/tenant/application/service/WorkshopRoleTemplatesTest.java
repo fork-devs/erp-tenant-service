@@ -71,14 +71,14 @@ class WorkshopRoleTemplatesTest {
         UUID actorId = UUID.randomUUID();
         when(roleRepository.existsByWorkshopIdAndTemplateCodeIgnoreCase(workshopId, "BRANCH_MANAGER"))
                 .thenReturn(false);
-        when(roleRepository.existsByWorkshopIdAndNameIgnoreCase(workshopId, "Jefe de Sede"))
+        when(roleRepository.existsByWorkshopIdAndNameIgnoreCase(workshopId, "Branch Manager"))
                 .thenReturn(false);
         when(roleRepository.save(any(WorkshopRoleJpaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(auditLogRepository.save(any(WorkshopRoleAuditLogJpaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         WorkshopRoleService.WorkshopRoleView created = service.activateTemplate(workshopId, actorId, "branch_manager");
 
-        assertEquals("Jefe de Sede", created.name());
+        assertEquals("Branch Manager", created.name());
         assertTrue(created.active());
         assertFalse(created.system());
         assertFalse(created.permissions().contains("BRANCH_MANAGE"));
@@ -116,7 +116,7 @@ class WorkshopRoleTemplatesTest {
         UUID branchId = UUID.randomUUID();
 
         WorkshopRoleJpaEntity role = new WorkshopRoleJpaEntity(
-                roleId, workshopId, workshopId, "Jefe de Sede", "Branch manager",
+                roleId, workshopId, workshopId, "Branch Manager", "Branch manager",
                 false, true, "WORKORDER_READ,STAFF_READ", Instant.now(), Instant.now()
         );
         when(roleRepository.findByIdAndWorkshopId(roleId, workshopId)).thenReturn(Optional.of(role));

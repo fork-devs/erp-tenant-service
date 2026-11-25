@@ -49,7 +49,7 @@ public class WorkshopRoleService {
         Map<String, RoleTemplateDefinition> templates = new LinkedHashMap<>();
         templates.put("BRANCH_MANAGER", new RoleTemplateDefinition(
                 "BRANCH_MANAGER",
-                "Jefe de Sede",
+                "Branch Manager",
                 "Manages daily operations, staff, inventory, quotes, and analytics for an assigned branch.",
                 Set.of(
                         "WORKORDER_READ", "WORKORDER_EXECUTE",
@@ -64,7 +64,7 @@ public class WorkshopRoleService {
         ));
         templates.put("SECRETARY", new RoleTemplateDefinition(
                 "SECRETARY",
-                "Secretaria / Recepcionista",
+                "Secretary / Receptionist",
                 "Handles front-desk appointments, read-only order/quote tracking, and checkout billing.",
                 Set.of(
                         "APPOINTMENT_MANAGE",

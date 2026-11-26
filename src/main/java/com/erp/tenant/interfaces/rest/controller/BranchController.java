@@ -8,6 +8,10 @@ import com.erp.tenant.application.dto.result.BranchSubscriptionResult;
 import com.erp.tenant.application.usecase.GetBranchesUseCase;
 import com.erp.tenant.application.usecase.ManageBranchSubscriptionUseCase;
 import com.erp.tenant.application.usecase.ManageBranchUseCase;
+import com.erp.tenant.domain.exception.BranchNotFoundException;
+import com.erp.tenant.infrastructure.adapter.external.MediaUploadClient;
+import com.erp.tenant.infrastructure.persistence.entity.BranchJpaEntity;
+import com.erp.tenant.infrastructure.persistence.repository.SpringDataBranchRepository;
 import com.erp.tenant.interfaces.rest.dto.request.AssignBranchSubscriptionRequest;
 import com.erp.tenant.interfaces.rest.dto.request.CreateBranchRequest;
 import com.erp.tenant.interfaces.rest.dto.request.UpdateBranchRequest;
@@ -16,9 +20,12 @@ import com.erp.tenant.interfaces.rest.dto.response.BranchSubscriptionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +48,12 @@ public class BranchController {
     private final ManageBranchUseCase manageBranchUseCase;
     private final GetBranchesUseCase getBranchesUseCase;
     private final ManageBranchSubscriptionUseCase subscriptionUseCase;
+
+    @Autowired(required = false)
+    private MediaUploadClient mediaUploadClient;
+
+    @Autowired(required = false)
+    private SpringDataBranchRepository branchRepository;
 
     public BranchController(ManageBranchUseCase manageBranchUseCase,
                             GetBranchesUseCase getBranchesUseCase,
@@ -58,7 +72,9 @@ public class BranchController {
                 request.code(),
                 request.name(),
                 request.address(),
-                request.phone()
+                request.phone(),
+                request.latitude(),
+                request.longitude()
         );
         BranchResult result = manageBranchUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(BranchResponse.from(result));
@@ -68,13 +84,15 @@ public class BranchController {
     @PreAuthorize("isAuthenticated() and @multiTenancySecurityService.isAuthorizedForBranch(#branchId)")
     @Operation(summary = "Actualizar Sede", description = "Actualiza datos de la sede")
     public ResponseEntity<BranchResponse> updateBranch(@PathVariable UUID branchId,
-                                                      @RequestBody UpdateBranchRequest request) {
+                                                      @Valid @RequestBody UpdateBranchRequest request) {
         UpdateBranchCommand command = new UpdateBranchCommand(
                 branchId,
                 request.code(),
                 request.name(),
                 request.address(),
-                request.phone()
+                request.phone(),
+                request.latitude(),
+                request.longitude()
         );
         BranchResult result = manageBranchUseCase.update(command);
         return ResponseEntity.ok(BranchResponse.from(result));
@@ -111,6 +129,35 @@ public class BranchController {
         );
         BranchSubscriptionResult result = subscriptionUseCase.assignSubscription(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(BranchSubscriptionResponse.from(result));
+    }
+
+    @PutMapping(value = "/{branchId}/banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated() and @multiTenancySecurityService.isAuthorizedForBranch(#branchId)")
+    @Transactional
+    @Operation(summary = "Subir Banner de Sede", description = "Sube una imagen de banner a Cloudflare R2 y la asocia a la sede")
+    public ResponseEntity<BranchResponse> uploadBanner(
+            @PathVariable UUID branchId,
+            @RequestParam("file") MultipartFile file) {
+        if (mediaUploadClient == null || branchRepository == null) {
+            throw new IllegalStateException("Media upload dependencies are not configured");
+        }
+        BranchJpaEntity entity = branchRepository.findById(branchId)
+                .orElseThrow(() -> new BranchNotFoundException(branchId));
+        MediaUploadClient.UploadedMedia uploaded = mediaUploadClient.upload(file, "branches/" + branchId);
+        entity.setBannerImageUrl(uploaded.url());
+        entity.setUpdatedAt(java.time.Instant.now());
+        branchRepository.save(entity);
+        return ResponseEntity.ok(new BranchResponse(
+                entity.getId(),
+                entity.getWorkshopId(),
+                entity.getCode(),
+                entity.getName(),
+                entity.getAddress(),
+                entity.getPhone(),
+                entity.getBannerImageUrl(),
+                entity.getLatitude(),
+                entity.getLongitude()
+        ));
     }
 
     @DeleteMapping("/{branchId}/subscription")

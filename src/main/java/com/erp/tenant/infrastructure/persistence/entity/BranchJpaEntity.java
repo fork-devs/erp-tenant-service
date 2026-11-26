@@ -33,6 +33,15 @@ public class BranchJpaEntity {
     @Column(nullable = false, length = 50)
     private String phone;
 
+    @Column(name = "banner_image_url", length = 500)
+    private String bannerImageUrl;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -86,6 +95,14 @@ public class BranchJpaEntity {
         return workshopId;
     }
 
+    public String getBannerImageUrl() {
+        return bannerImageUrl;
+    }
+
+    public void setBannerImageUrl(String bannerImageUrl) {
+        this.bannerImageUrl = bannerImageUrl;
+    }
+
     public void setWorkshopId(UUID workshopId) {
         this.workshopId = workshopId;
     }
@@ -120,6 +137,22 @@ public class BranchJpaEntity {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public boolean isActive() {

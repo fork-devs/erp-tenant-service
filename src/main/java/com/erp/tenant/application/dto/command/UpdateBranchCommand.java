@@ -7,5 +7,11 @@ public record UpdateBranchCommand(
         String code,
         String name,
         String address,
-        String phone
-) {}
+        String phone,
+        Double latitude,
+        Double longitude
+) {
+    public UpdateBranchCommand(UUID branchId, String code, String name, String address, String phone) {
+        this(branchId, code, name, address, phone, null, null);
+    }
+}

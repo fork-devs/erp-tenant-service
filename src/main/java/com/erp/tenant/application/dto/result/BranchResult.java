@@ -12,10 +12,26 @@ public record BranchResult(
         String name,
         String address,
         String phone,
+        Double latitude,
+        Double longitude,
         boolean active,
         Instant createdAt,
         Instant updatedAt
 ) {
+    public BranchResult(
+            UUID id,
+            UUID workshopId,
+            String code,
+            String name,
+            String address,
+            String phone,
+            boolean active,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(id, workshopId, code, name, address, phone, null, null, active, createdAt, updatedAt);
+    }
+
     public static BranchResult from(Branch branch) {
         if (branch == null) return null;
         return new BranchResult(
@@ -25,6 +41,8 @@ public record BranchResult(
                 branch.getName(),
                 branch.getAddress(),
                 branch.getPhone(),
+                branch.getLatitude(),
+                branch.getLongitude(),
                 branch.isActive(),
                 branch.getCreatedAt(),
                 branch.getUpdatedAt()

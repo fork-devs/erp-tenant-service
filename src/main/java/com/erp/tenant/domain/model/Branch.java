@@ -17,6 +17,8 @@ public class Branch implements Serializable {
     private String name;
     private String address;
     private String phone;
+    private Double latitude;
+    private Double longitude;
     private boolean active;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -28,6 +30,21 @@ public class Branch implements Serializable {
                   String name,
                   String address,
                   String phone,
+                  boolean active,
+                  Instant createdAt,
+                  Instant updatedAt) {
+        this(id, tenantId, workshopId, code, name, address, phone, null, null, active, createdAt, updatedAt);
+    }
+
+    public Branch(UUID id,
+                  UUID tenantId,
+                  UUID workshopId,
+                  String code,
+                  String name,
+                  String address,
+                  String phone,
+                  Double latitude,
+                  Double longitude,
                   boolean active,
                   Instant createdAt,
                   Instant updatedAt) {
@@ -52,6 +69,7 @@ public class Branch implements Serializable {
         if (phone == null || phone.trim().isEmpty()) {
             throw new IllegalArgumentException("Branch phone is required");
         }
+        validateCoordinates(latitude, longitude);
 
         this.id = id;
         this.tenantId = tenantId;
@@ -60,6 +78,8 @@ public class Branch implements Serializable {
         this.name = name.trim();
         this.address = address.trim();
         this.phone = phone.trim();
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.active = active;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.updatedAt = updatedAt != null ? updatedAt : this.createdAt;
@@ -71,6 +91,17 @@ public class Branch implements Serializable {
                                 String name,
                                 String address,
                                 String phone) {
+        return create(tenantId, workshopId, code, name, address, phone, null, null);
+    }
+
+    public static Branch create(UUID tenantId,
+                                UUID workshopId,
+                                String code,
+                                String name,
+                                String address,
+                                String phone,
+                                Double latitude,
+                                Double longitude) {
         Instant now = Instant.now();
         return new Branch(
                 UUID.randomUUID(),
@@ -80,6 +111,8 @@ public class Branch implements Serializable {
                 name,
                 address,
                 phone,
+                latitude,
+                longitude,
                 true,
                 now,
                 now
@@ -94,6 +127,10 @@ public class Branch implements Serializable {
     }
 
     public void update(String code, String name, String address, String phone) {
+        update(code, name, address, phone, null, null);
+    }
+
+    public void update(String code, String name, String address, String phone, Double latitude, Double longitude) {
         if (code != null && !code.trim().isEmpty()) {
             this.code = normalizeCode(code);
         }
@@ -106,7 +143,26 @@ public class Branch implements Serializable {
         if (phone != null && !phone.trim().isEmpty()) {
             this.phone = phone.trim();
         }
+        if (latitude != null || longitude != null) {
+            validateCoordinates(latitude, longitude);
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
         this.updatedAt = Instant.now();
+    }
+
+    private static void validateCoordinates(Double latitude, Double longitude) {
+        if ((latitude == null) != (longitude == null)) {
+            throw new IllegalArgumentException("Both latitude and longitude must be provided together");
+        }
+        if (latitude != null) {
+            if (!Double.isFinite(latitude) || latitude < -90.0 || latitude > 90.0) {
+                throw new IllegalArgumentException("Branch latitude must be between -90 and 90");
+            }
+            if (!Double.isFinite(longitude) || longitude < -180.0 || longitude > 180.0) {
+                throw new IllegalArgumentException("Branch longitude must be between -180 and 180");
+            }
+        }
     }
 
     public void deactivate() {
@@ -140,6 +196,14 @@ public class Branch implements Serializable {
 
     public String getPhone() {
         return phone;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
     }
 
     public boolean isActive() {

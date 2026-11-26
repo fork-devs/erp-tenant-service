@@ -50,6 +50,30 @@ class BranchDomainTest {
     }
 
     @Test
+    @DisplayName("Should store and validate branch coordinates")
+    void shouldStoreAndValidateCoordinates() {
+        UUID tenantId = UUID.randomUUID();
+        UUID workshopId = UUID.randomUUID();
+
+        Branch branch = Branch.create(tenantId, workshopId, "SEDE-01", "Sede Central", "Av. Arequipa 123", "+51999111222", -12.0464, -77.0428);
+        assertThat(branch.getLatitude()).isEqualTo(-12.0464);
+        assertThat(branch.getLongitude()).isEqualTo(-77.0428);
+
+        branch.update(null, null, null, null, -12.1211, -77.0297);
+        assertThat(branch.getLatitude()).isEqualTo(-12.1211);
+        assertThat(branch.getLongitude()).isEqualTo(-77.0297);
+
+        assertThatThrownBy(() -> Branch.create(tenantId, workshopId, "SEDE-02", "Norte", "Addr", "Phone", -95.0, -77.0))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Branch.create(tenantId, workshopId, "SEDE-03", "Sur", "Addr", "Phone", -12.0, 185.0))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Branch.create(tenantId, workshopId, "SEDE-04", "Este", "Addr", "Phone", -12.0, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("Should create and cancel branch subscription")
     void shouldManageBranchSubscription() {
         UUID tenantId = UUID.randomUUID();

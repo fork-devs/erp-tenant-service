@@ -58,7 +58,9 @@ public class BranchService implements ManageBranchUseCase, GetBranchesUseCase, M
                 command.code(),
                 command.name(),
                 command.address(),
-                command.phone()
+                command.phone(),
+                command.latitude(),
+                command.longitude()
         );
 
         Branch saved = unitOfWork.callInTransaction(() -> branchRepositoryPort.save(branch));
@@ -81,7 +83,7 @@ public class BranchService implements ManageBranchUseCase, GetBranchesUseCase, M
             }
         }
 
-        branch.update(command.code(), command.name(), command.address(), command.phone());
+        branch.update(command.code(), command.name(), command.address(), command.phone(), command.latitude(), command.longitude());
         Branch saved = unitOfWork.callInTransaction(() -> branchRepositoryPort.save(branch));
         return BranchResult.from(saved);
     }

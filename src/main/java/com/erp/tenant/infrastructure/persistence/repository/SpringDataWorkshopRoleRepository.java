@@ -11,4 +11,5 @@ public interface SpringDataWorkshopRoleRepository extends JpaRepository<Workshop
     List<WorkshopRoleJpaEntity> findByWorkshopIdAndActiveTrueOrderByNameAsc(UUID workshopId);
     Optional<WorkshopRoleJpaEntity> findByIdAndWorkshopId(UUID id, UUID workshopId);
     boolean existsByWorkshopIdAndNameIgnoreCase(UUID workshopId, String name);
+    boolean existsByWorkshopIdAndTemplateCodeIgnoreCase(UUID workshopId, String templateCode);
 }

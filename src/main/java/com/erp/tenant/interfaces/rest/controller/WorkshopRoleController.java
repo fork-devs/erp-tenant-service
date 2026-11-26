@@ -35,7 +35,11 @@ public class WorkshopRoleController {
             @NotEmpty Set<String> permissions
     ) {}
 
-    public record AssignWorkshopRoleRequest(@NotNull UUID userId) {}
+    public record AssignWorkshopRoleRequest(@NotNull UUID userId, UUID branchId) {
+        public AssignWorkshopRoleRequest(UUID userId) {
+            this(userId, null);
+        }
+    }
 
     private final WorkshopRoleService workshopRoleService;
 
@@ -48,6 +52,26 @@ public class WorkshopRoleController {
     @Operation(summary = "List workshop roles")
     public ResponseEntity<List<WorkshopRoleService.WorkshopRoleView>> listRoles(@PathVariable UUID workshopId) {
         return ResponseEntity.ok(workshopRoleService.listRoles(workshopId));
+    }
+
+    @GetMapping("/templates")
+    @PreAuthorize("@multiTenancySecurityService.hasWorkshopPermission(#workshopId, 'ROLE_MANAGE')")
+    @Operation(summary = "List optional activatable workshop role templates")
+    public ResponseEntity<List<WorkshopRoleService.RoleTemplateView>> listTemplates(@PathVariable UUID workshopId) {
+        return ResponseEntity.ok(workshopRoleService.listTemplates(workshopId));
+    }
+
+    @PostMapping("/templates/{templateCode}/activate")
+    @PreAuthorize("@multiTenancySecurityService.hasWorkshopPermission(#workshopId, 'ROLE_MANAGE')")
+    @Operation(summary = "Activate an optional workshop role template")
+    public ResponseEntity<WorkshopRoleService.WorkshopRoleView> activateTemplate(
+            @PathVariable UUID workshopId,
+            @PathVariable String templateCode,
+            Authentication auth) {
+        WorkshopRoleService.WorkshopRoleView created = workshopRoleService.activateTemplate(
+                workshopId, resolveActorId(auth, workshopId), templateCode
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PostMapping
@@ -97,7 +121,9 @@ public class WorkshopRoleController {
             @PathVariable UUID roleId,
             @Valid @RequestBody AssignWorkshopRoleRequest request,
             Authentication auth) {
-        workshopRoleService.assignRole(workshopId, roleId, resolveActorId(auth, workshopId), request.userId());
+        workshopRoleService.assignRole(
+                workshopId, roleId, resolveActorId(auth, workshopId), request.userId(), request.branchId()
+        );
         return ResponseEntity.noContent().build();
     }
 

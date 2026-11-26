@@ -17,6 +17,8 @@ public final class BranchPersistenceMapper {
                 entity.getName(),
                 entity.getAddress(),
                 entity.getPhone(),
+                entity.getLatitude(),
+                entity.getLongitude(),
                 entity.isActive(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -25,7 +27,7 @@ public final class BranchPersistenceMapper {
 
     public static BranchJpaEntity toEntity(Branch domain) {
         if (domain == null) return null;
-        return new BranchJpaEntity(
+        BranchJpaEntity entity = new BranchJpaEntity(
                 domain.getId(),
                 domain.getTenantId(),
                 domain.getWorkshopId(),
@@ -37,5 +39,8 @@ public final class BranchPersistenceMapper {
                 domain.getCreatedAt(),
                 domain.getUpdatedAt()
         );
+        entity.setLatitude(domain.getLatitude());
+        entity.setLongitude(domain.getLongitude());
+        return entity;
     }
 }

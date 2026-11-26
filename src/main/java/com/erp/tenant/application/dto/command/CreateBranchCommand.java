@@ -7,5 +7,11 @@ public record CreateBranchCommand(
         String code,
         String name,
         String address,
-        String phone
-) {}
+        String phone,
+        Double latitude,
+        Double longitude
+) {
+    public CreateBranchCommand(UUID workshopId, String code, String name, String address, String phone) {
+        this(workshopId, code, name, address, phone, null, null);
+    }
+}

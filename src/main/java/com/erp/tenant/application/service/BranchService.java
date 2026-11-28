@@ -62,6 +62,9 @@ public class BranchService implements ManageBranchUseCase, GetBranchesUseCase, M
                 command.latitude(),
                 command.longitude()
         );
+        if (command.coverImageUrl() != null && !command.coverImageUrl().isBlank()) {
+            branch.setBannerImageUrl(command.coverImageUrl());
+        }
 
         Branch saved = unitOfWork.callInTransaction(() -> branchRepositoryPort.save(branch));
         return BranchResult.from(saved);
@@ -84,6 +87,9 @@ public class BranchService implements ManageBranchUseCase, GetBranchesUseCase, M
         }
 
         branch.update(command.code(), command.name(), command.address(), command.phone(), command.latitude(), command.longitude());
+        if (command.coverImageUrl() != null && !command.coverImageUrl().isBlank()) {
+            branch.setBannerImageUrl(command.coverImageUrl());
+        }
         Branch saved = unitOfWork.callInTransaction(() -> branchRepositoryPort.save(branch));
         return BranchResult.from(saved);
     }

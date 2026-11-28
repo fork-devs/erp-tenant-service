@@ -9,5 +9,13 @@ public record AssignBranchSubscriptionRequest(
         UUID planId,
 
         @NotBlank(message = "billingCycle is required (MONTHLY or ANNUAL)")
-        String billingCycle
-) {}
+        String billingCycle,
+
+        String paymentToken,
+
+        String paymentReference
+) {
+    public AssignBranchSubscriptionRequest(UUID planId, String billingCycle) {
+        this(planId, billingCycle, null, null);
+    }
+}

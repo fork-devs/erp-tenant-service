@@ -17,6 +17,7 @@ public class Branch implements Serializable {
     private String name;
     private String address;
     private String phone;
+    private String bannerImageUrl;
     private Double latitude;
     private Double longitude;
     private boolean active;
@@ -204,6 +205,14 @@ public class Branch implements Serializable {
 
     public Double getLongitude() {
         return longitude;
+    }
+
+    public String getBannerImageUrl() {
+        return bannerImageUrl;
+    }
+
+    public void setBannerImageUrl(String bannerImageUrl) {
+        this.bannerImageUrl = (bannerImageUrl != null && !bannerImageUrl.isBlank()) ? bannerImageUrl.trim() : null;
     }
 
     public boolean isActive() {

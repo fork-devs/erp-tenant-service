@@ -5,6 +5,7 @@ import com.erp.tenant.application.dto.command.CreateBranchCommand;
 import com.erp.tenant.application.dto.command.UpdateBranchCommand;
 import com.erp.tenant.application.dto.result.BranchResult;
 import com.erp.tenant.application.dto.result.BranchSubscriptionResult;
+import com.erp.tenant.application.service.BranchCatalogService;
 import com.erp.tenant.application.usecase.GetBranchesUseCase;
 import com.erp.tenant.application.usecase.ManageBranchSubscriptionUseCase;
 import com.erp.tenant.application.usecase.ManageBranchUseCase;
@@ -12,6 +13,7 @@ import com.erp.tenant.domain.exception.BranchNotFoundException;
 import com.erp.tenant.infrastructure.adapter.external.MediaUploadClient;
 import com.erp.tenant.infrastructure.persistence.entity.BranchJpaEntity;
 import com.erp.tenant.infrastructure.persistence.repository.SpringDataBranchRepository;
+import com.erp.tenant.infrastructure.security.MultiTenancySecurityService;
 import com.erp.tenant.interfaces.rest.dto.request.AssignBranchSubscriptionRequest;
 import com.erp.tenant.interfaces.rest.dto.request.CreateBranchRequest;
 import com.erp.tenant.interfaces.rest.dto.request.UpdateBranchRequest;
@@ -55,6 +57,12 @@ public class BranchController {
     @Autowired(required = false)
     private SpringDataBranchRepository branchRepository;
 
+    @Autowired(required = false)
+    private BranchCatalogService branchCatalogService;
+
+    @Autowired(required = false)
+    private MultiTenancySecurityService multiTenancySecurityService;
+
     public BranchController(ManageBranchUseCase manageBranchUseCase,
                             GetBranchesUseCase getBranchesUseCase,
                             ManageBranchSubscriptionUseCase subscriptionUseCase) {
@@ -74,7 +82,8 @@ public class BranchController {
                 request.address(),
                 request.phone(),
                 request.latitude(),
-                request.longitude()
+                request.longitude(),
+                request.coverImageUrl()
         );
         BranchResult result = manageBranchUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(BranchResponse.from(result));
@@ -92,7 +101,8 @@ public class BranchController {
                 request.address(),
                 request.phone(),
                 request.latitude(),
-                request.longitude()
+                request.longitude(),
+                request.coverImageUrl()
         );
         BranchResult result = manageBranchUseCase.update(command);
         return ResponseEntity.ok(BranchResponse.from(result));
@@ -106,11 +116,23 @@ public class BranchController {
         return ResponseEntity.ok(BranchResponse.from(result));
     }
 
+    @GetMapping("/catalog")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "B2C Branch Catalog", description = "Lists active branches enriched with workshop brand metadata")
+    public ResponseEntity<List<BranchCatalogService.BranchCatalogItem>> listCatalog(
+            @RequestParam(name = "workshopId", required = false) UUID workshopId) {
+        if (branchCatalogService == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(branchCatalogService.listCatalog(workshopId));
+    }
+
     @GetMapping
-    @PreAuthorize("isAuthenticated() and @multiTenancySecurityService.isAuthorizedForWorkshop(#workshopId)")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Listar Sedes de un Taller", description = "Lista sedes del taller, filtrando por acceso del caller")
     public ResponseEntity<List<BranchResponse>> listBranches(@RequestParam(name = "workshopId") UUID workshopId) {
         List<BranchResponse> responses = getBranchesUseCase.listByWorkshop(workshopId).stream()
+                .filter(b -> multiTenancySecurityService == null || multiTenancySecurityService.isAuthorizedForBranch(b.id()))
                 .map(BranchResponse::from)
                 .toList();
         return ResponseEntity.ok(responses);

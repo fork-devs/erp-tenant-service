@@ -4,6 +4,7 @@ import com.erp.tenant.application.dto.result.ProfileUnifiedResult;
 import com.erp.tenant.application.usecase.GetProfilesUseCase;
 import com.erp.tenant.domain.exception.ProfileNotFoundException;
 import com.erp.tenant.domain.exception.TenantAccessDeniedException;
+import com.erp.tenant.domain.port.CustomerProfileQueryPort;
 import com.erp.tenant.infrastructure.adapter.external.MediaUploadClient;
 import com.erp.tenant.infrastructure.persistence.entity.EmployeeProfileJpaEntity;
 import com.erp.tenant.infrastructure.persistence.entity.OwnerProfileJpaEntity;
@@ -126,6 +127,9 @@ public class ProfileController {
     @Autowired(required = false)
     private MediaUploadClient mediaUploadClient;
 
+    @Autowired(required = false)
+    private CustomerProfileQueryPort customerProfileQueryPort;
+
     @PutMapping("/me/image")
     @PatchMapping("/me/image")
     @PreAuthorize("isAuthenticated()")
@@ -140,8 +144,15 @@ public class ProfileController {
         Optional<EmployeeProfileJpaEntity> empOpt = employeeProfileRepository != null
                 ? employeeProfileRepository.findByUserId(userId) : Optional.empty();
 
+        boolean customerUpdated = false;
         if (ownerOpt.isEmpty() && empOpt.isEmpty()) {
-            throw new ProfileNotFoundException("No Core profiles associated with user: " + userId);
+            if (customerProfileQueryPort != null
+                    && customerProfileQueryPort.updateProfileImage(userId, request.profileImageUrl().trim()).isPresent()) {
+                customerUpdated = true;
+            }
+            if (!customerUpdated) {
+                throw new ProfileNotFoundException("No Core profiles associated with user: " + userId);
+            }
         }
 
         Instant now = Instant.now();
@@ -191,7 +202,10 @@ public class ProfileController {
                         e.getDocumentType(), e.getDocumentNumber(), e.getPhone(), e.getProfileImageUrl()))
                 .orElse(null)
                 : null;
-        return new UserProfileContextResponse(userId, roles, ownerView, empView, null);
+        Object customerView = customerProfileQueryPort != null
+                ? customerProfileQueryPort.findByUserId(userId).orElse(null)
+                : null;
+        return new UserProfileContextResponse(userId, roles, ownerView, empView, customerView);
     }
 
     private UUID resolveAuthenticatedUserId(Authentication auth) {

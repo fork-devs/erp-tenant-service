@@ -9,7 +9,7 @@ public final class BranchPersistenceMapper {
 
     public static Branch toDomain(BranchJpaEntity entity) {
         if (entity == null) return null;
-        return new Branch(
+        Branch branch = new Branch(
                 entity.getId(),
                 entity.getTenantId(),
                 entity.getWorkshopId(),
@@ -23,6 +23,8 @@ public final class BranchPersistenceMapper {
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+        branch.setBannerImageUrl(entity.getBannerImageUrl());
+        return branch;
     }
 
     public static BranchJpaEntity toEntity(Branch domain) {
@@ -41,6 +43,7 @@ public final class BranchPersistenceMapper {
         );
         entity.setLatitude(domain.getLatitude());
         entity.setLongitude(domain.getLongitude());
+        entity.setBannerImageUrl(domain.getBannerImageUrl());
         return entity;
     }
 }

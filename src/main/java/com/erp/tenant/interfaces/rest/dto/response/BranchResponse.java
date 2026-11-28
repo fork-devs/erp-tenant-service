@@ -12,15 +12,21 @@ public record BranchResponse(
         String address,
         String phone,
         String bannerImageUrl,
+        String coverImageUrl,
         Double latitude,
         Double longitude
 ) {
     public BranchResponse(UUID id, UUID workshopId, String code, String name, String address, String phone) {
-        this(id, workshopId, code, name, address, phone, null, null, null);
+        this(id, workshopId, code, name, address, phone, null, null, null, null);
     }
 
     public BranchResponse(UUID id, UUID workshopId, String code, String name, String address, String phone, String bannerImageUrl) {
-        this(id, workshopId, code, name, address, phone, bannerImageUrl, null, null);
+        this(id, workshopId, code, name, address, phone, bannerImageUrl, bannerImageUrl, null, null);
+    }
+
+    public BranchResponse(UUID id, UUID workshopId, String code, String name, String address, String phone,
+                          String bannerImageUrl, Double latitude, Double longitude) {
+        this(id, workshopId, code, name, address, phone, bannerImageUrl, bannerImageUrl, latitude, longitude);
     }
 
     public static BranchResponse from(BranchResult result) {
@@ -32,7 +38,8 @@ public record BranchResponse(
                 result.name(),
                 result.address(),
                 result.phone(),
-                null,
+                result.bannerImageUrl(),
+                result.bannerImageUrl(),
                 result.latitude(),
                 result.longitude()
         );

@@ -5,8 +5,10 @@ import com.erp.tenant.application.usecase.GetProfilesUseCase;
 import com.erp.tenant.domain.exception.ProfileNotFoundException;
 import com.erp.tenant.domain.model.EmployeeProfile;
 import com.erp.tenant.domain.model.OwnerProfile;
+import com.erp.tenant.domain.port.CustomerProfileQueryPort;
 import com.erp.tenant.domain.port.EmployeeProfileRepositoryPort;
 import com.erp.tenant.domain.port.OwnerProfileRepositoryPort;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +19,17 @@ public class ProfileService implements GetProfilesUseCase {
 
     private final OwnerProfileRepositoryPort ownerRepositoryPort;
     private final EmployeeProfileRepositoryPort employeeRepositoryPort;
+    private CustomerProfileQueryPort customerProfileQueryPort;
 
     public ProfileService(OwnerProfileRepositoryPort ownerRepositoryPort,
                           EmployeeProfileRepositoryPort employeeRepositoryPort) {
         this.ownerRepositoryPort = ownerRepositoryPort;
         this.employeeRepositoryPort = employeeRepositoryPort;
+    }
+
+    @Autowired(required = false)
+    public void setCustomerProfileQueryPort(CustomerProfileQueryPort customerProfileQueryPort) {
+        this.customerProfileQueryPort = customerProfileQueryPort;
     }
 
     @Override
@@ -32,6 +40,9 @@ public class ProfileService implements GetProfilesUseCase {
         }
         if (employeeRepositoryPort.findByUserId(userId).isPresent()) {
             roles.add("ROLE_EMPLOYEE");
+        }
+        if (customerProfileQueryPort != null && customerProfileQueryPort.findByUserId(userId).isPresent()) {
+            roles.add("ROLE_CUSTOMER");
         }
         if (roles.isEmpty()) {
             throw new ProfileNotFoundException("User has no active business profiles: " + userId);
@@ -78,6 +89,25 @@ public class ProfileService implements GetProfilesUseCase {
                     null,
                     List.of("ROLE_EMPLOYEE")
             );
+        }
+
+        if (customerProfileQueryPort != null) {
+            Optional<CustomerProfileQueryPort.CustomerProfileSnapshot> custOpt = customerProfileQueryPort.findByDocumentNumber(doc);
+            if (custOpt.isPresent()) {
+                CustomerProfileQueryPort.CustomerProfileSnapshot c = custOpt.get();
+                return new ProfileUnifiedResult(
+                        "CUSTOMER",
+                        c.userId(),
+                        c.firstName(),
+                        c.lastName(),
+                        c.documentType(),
+                        c.documentNumber(),
+                        c.phone(),
+                        null,
+                        null,
+                        List.of("ROLE_CUSTOMER")
+                );
+            }
         }
 
         throw new ProfileNotFoundException("No profile found for document: " + doc);

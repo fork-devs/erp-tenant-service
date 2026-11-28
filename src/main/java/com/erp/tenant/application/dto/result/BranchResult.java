@@ -12,6 +12,7 @@ public record BranchResult(
         String name,
         String address,
         String phone,
+        String bannerImageUrl,
         Double latitude,
         Double longitude,
         boolean active,
@@ -29,7 +30,23 @@ public record BranchResult(
             Instant createdAt,
             Instant updatedAt
     ) {
-        this(id, workshopId, code, name, address, phone, null, null, active, createdAt, updatedAt);
+        this(id, workshopId, code, name, address, phone, null, null, null, active, createdAt, updatedAt);
+    }
+
+    public BranchResult(
+            UUID id,
+            UUID workshopId,
+            String code,
+            String name,
+            String address,
+            String phone,
+            Double latitude,
+            Double longitude,
+            boolean active,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(id, workshopId, code, name, address, phone, null, latitude, longitude, active, createdAt, updatedAt);
     }
 
     public static BranchResult from(Branch branch) {
@@ -41,6 +58,7 @@ public record BranchResult(
                 branch.getName(),
                 branch.getAddress(),
                 branch.getPhone(),
+                branch.getBannerImageUrl(),
                 branch.getLatitude(),
                 branch.getLongitude(),
                 branch.isActive(),

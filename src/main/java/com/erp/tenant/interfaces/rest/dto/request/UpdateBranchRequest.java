@@ -15,9 +15,15 @@ public record UpdateBranchRequest(
 
         @DecimalMin(value = "-180.0", message = "longitude must be >= -180.0")
         @DecimalMax(value = "180.0", message = "longitude must be <= 180.0")
-        Double longitude
+        Double longitude,
+
+        String coverImageUrl
 ) {
     public UpdateBranchRequest(String code, String name, String address, String phone) {
-        this(code, name, address, phone, null, null);
+        this(code, name, address, phone, null, null, null);
+    }
+
+    public UpdateBranchRequest(String code, String name, String address, String phone, Double latitude, Double longitude) {
+        this(code, name, address, phone, latitude, longitude, null);
     }
 }
